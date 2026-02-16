@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1A834B7BAF3FFAB7F6E756EF /* SyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70B8267184F19FCC998F9109 /* SyncEngine.swift */; };
 		2462B5E770F1CE40888ABFFF /* ChangeLogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8870509F6D1F6EF5268655F /* ChangeLogEntry.swift */; };
 		3B47417414D78C347887F1E1 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D5D76F824815C4F1E72DC2A /* MainWindowController.swift */; };
 		547CB0CC931B91AC5A44B0F6 /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 12C68166BB39796BB3A536F8 /* Network.framework */; };
@@ -41,6 +42,7 @@
 		488AADCB6EC700DD34725BB3 /* WebViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewController.swift; sourceTree = "<group>"; };
 		4EC2808E6B09A89157255702 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		6A253EC7CE9E9336BA77A4A7 /* LocalCue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalCue.swift; sourceTree = "<group>"; };
+		70B8267184F19FCC998F9109 /* SyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngine.swift; sourceTree = "<group>"; };
 		734DE71B995BDAE8D81D75C1 /* app.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = app.js; sourceTree = "<group>"; };
 		777E154282BD3E9901B1A4A2 /* StatusBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarView.swift; sourceTree = "<group>"; };
 		77DC5362D52FD7B5156ABDCB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
@@ -150,6 +152,7 @@
 			isa = PBXGroup;
 			children = (
 				7BEB1E85D4025E8D98BF01F7 /* ConnectivityMonitor.swift */,
+				70B8267184F19FCC998F9109 /* SyncEngine.swift */,
 			);
 			path = Sync;
 			sourceTree = "<group>";
@@ -301,6 +304,7 @@
 				EAF7AD871D7D0D80C0E8BF09 /* RequestRouter.swift in Sources */,
 				584D99AF6274729515B4ED2A /* SSEBroadcaster.swift in Sources */,
 				AC8F6304DACC343AA8FD7FFB /* StatusBarView.swift in Sources */,
+				1A834B7BAF3FFAB7F6E756EF /* SyncEngine.swift in Sources */,
 				BB06D2A953D87D6B1DE89CAD /* WebViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

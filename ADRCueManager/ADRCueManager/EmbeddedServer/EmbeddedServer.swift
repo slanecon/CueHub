@@ -11,6 +11,8 @@ class EmbeddedServer {
     let sseBroadcaster = SSEBroadcaster()
     private let settings = AppSettings.shared
     private let connectivityMonitor = ConnectivityMonitor()
+    private let syncEngine = SyncEngine()
+    private var isSyncing = false
 
     /// The local port this embedded server listens on
     let port: UInt16 = 3001
@@ -37,15 +39,43 @@ class EmbeddedServer {
             print("[EmbeddedServer] Failed to start: \(error)")
         }
 
+        // Configure sync engine
+        syncEngine.onProgress = { [weak self] step, total, desc in
+            print("[Sync] \(step)/\(total): \(desc)")
+            self?.sseBroadcaster.broadcast(event: [
+                "type": "sync-progress",
+                "step": step, "total": total, "description": desc,
+                "originClientId": "system"
+            ])
+        }
+        syncEngine.onComplete = { [weak self] result in
+            guard let self = self else { return }
+            self.isSyncing = false
+            print("[Sync] Complete: pushed=\(result.pushed) pulled=\(result.pulled) conflicts=\(result.conflicts) errors=\(result.errors)")
+            if result.success {
+                self.router.goOnline(serverURL: self.settings.remoteServerURL)
+            }
+            self.sseBroadcaster.broadcast(event: [
+                "type": "sync-complete",
+                "pushed": result.pushed, "pulled": result.pulled,
+                "conflicts": result.conflicts, "success": result.success,
+                "originClientId": "system"
+            ])
+            // Tell the web frontend to reload data
+            self.sseBroadcaster.broadcast(event: [
+                "type": "created", "entity": "cue", "id": "",
+                "originClientId": "system"
+            ])
+        }
+
         // Start connectivity monitoring
         connectivityMonitor.onStatusChanged = { [weak self] online in
             guard let self = self else { return }
             if online {
-                self.router.goOnline(serverURL: self.settings.remoteServerURL)
+                self.runSyncIfNeeded()
             } else {
                 self.router.goOffline()
             }
-            // Notify via SSE
             self.sseBroadcaster.broadcastConnectionStatus(online: online)
         }
         connectivityMonitor.serverURL = settings.remoteServerURL
@@ -58,38 +88,66 @@ class EmbeddedServer {
         print("[EmbeddedServer] Stopped")
     }
 
+    /// Run sync if there are unsynced local changes, then switch to online mode.
+    private func runSyncIfNeeded() {
+        guard !isSyncing else { return }
+
+        let hasChanges = (try? AppDatabase.shared.unsyncedChanges().count) ?? 0 > 0
+        if hasChanges {
+            isSyncing = true
+            print("[EmbeddedServer] Starting sync with \(hasChanges) pending changes...")
+            syncEngine.sync(serverURL: settings.remoteServerURL)
+        } else {
+            // No local changes — just pull and go online
+            isSyncing = true
+            syncEngine.onComplete = { [weak self] result in
+                guard let self = self else { return }
+                self.isSyncing = false
+                self.router.goOnline(serverURL: self.settings.remoteServerURL)
+                self.sseBroadcaster.broadcastConnectionStatus(online: true)
+                // Trigger data reload
+                self.sseBroadcaster.broadcast(event: [
+                    "type": "created", "entity": "cue", "id": "",
+                    "originClientId": "system"
+                ])
+            }
+            syncEngine.sync(serverURL: settings.remoteServerURL)
+        }
+    }
+
     // MARK: - Static Routes
 
     private func registerStaticRoutes(_ server: HttpServer) {
-        let bundle = Bundle.main
-        let webDir = bundle.resourcePath.map { $0 + "/Web" }
-
         // Serve index.html with injected NATIVE_API_BASE
         server["/index.html"] = { [weak self] _ in
             guard let self = self else { return .notFound }
-            if let dir = webDir, let data = FileManager.default.contents(atPath: dir + "/index.html"),
-               var html = String(data: data, encoding: .utf8) {
-                // Inject native API base before closing </head>
-                let injection = "<script>window.NATIVE_API_BASE = 'http://localhost:\(self.port)';</script>"
-                html = html.replacingOccurrences(of: "</head>", with: injection + "</head>")
-                return .ok(.html(html))
+            guard let url = Bundle.main.url(forResource: "index", withExtension: "html"),
+                  let data = try? Data(contentsOf: url),
+                  var html = String(data: data, encoding: .utf8) else {
+                print("[EmbeddedServer] index.html not found in bundle")
+                return .notFound
             }
-            // Fall back to fetching from remote server
-            return .notFound
+            let injection = "<script>window.NATIVE_API_BASE = 'http://localhost:\(self.port)';</script>"
+            html = html.replacingOccurrences(of: "</head>", with: injection + "</head>")
+            return .ok(.html(html))
         }
 
         server["/style.css"] = { _ in
-            if let dir = webDir, let data = FileManager.default.contents(atPath: dir + "/style.css") {
-                return .raw(200, "text/css", nil) { writer in try writer.write(data) }
+            guard let url = Bundle.main.url(forResource: "style", withExtension: "css"),
+                  let data = try? Data(contentsOf: url) else {
+                print("[EmbeddedServer] style.css not found in bundle")
+                return .notFound
             }
-            return .notFound
+            return .raw(200, "text/css", nil) { writer in try writer.write(data) }
         }
 
         server["/app.js"] = { _ in
-            if let dir = webDir, let data = FileManager.default.contents(atPath: dir + "/app.js") {
-                return .raw(200, "application/javascript", nil) { writer in try writer.write(data) }
+            guard let url = Bundle.main.url(forResource: "app", withExtension: "js"),
+                  let data = try? Data(contentsOf: url) else {
+                print("[EmbeddedServer] app.js not found in bundle")
+                return .notFound
             }
-            return .notFound
+            return .raw(200, "application/javascript", nil) { writer in try writer.write(data) }
         }
 
         // Root redirects to index.html

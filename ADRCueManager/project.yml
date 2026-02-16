@@ -27,6 +27,16 @@ targets:
       - path: ADRCueManager
         excludes:
           - "**/.DS_Store"
+          - "Resources/Web/**"
+      - path: ADRCueManager/Resources/Web/index.html
+        buildPhase: resources
+        type: file
+      - path: ADRCueManager/Resources/Web/app.js
+        buildPhase: resources
+        type: file
+      - path: ADRCueManager/Resources/Web/style.css
+        buildPhase: resources
+        type: file
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.slanecon.ADRCueManager
