@@ -1,0 +1,14 @@
+{
+  "name": "sound-cue-manager",
+  "version": "1.0.0",
+  "description": "Sound editing cue manager for LAN deployment",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "better-sqlite3": "^11.7.0"
+  },
+  "license": "MIT"
+}
