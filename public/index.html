@@ -9,6 +9,10 @@
 <body>
   <header>
     <h1>Sound Cue Manager</h1>
+    <div id="user-info" style="display:none;">
+      <span id="user-display"></span>
+      <button id="logout-btn" class="btn-small btn-secondary">Log out</button>
+    </div>
   </header>
 
   <main>
@@ -97,6 +101,55 @@
       <div class="modal-actions">
         <button id="confirm-yes" class="btn-danger">Delete</button>
         <button id="confirm-no" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Name Prompt Modal -->
+  <div id="name-modal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <h3>Welcome</h3>
+      <p>Enter your name so other users can see who's editing.</p>
+      <form id="name-form">
+        <div class="form-group">
+          <label for="user-name-input">Your Name</label>
+          <input type="text" id="user-name-input" required autofocus maxlength="30">
+        </div>
+        <div class="modal-actions">
+          <button type="submit">Continue</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Conflict Resolution Modal -->
+  <div id="conflict-modal" class="modal-overlay" style="display:none;">
+    <div class="modal conflict-modal">
+      <h3>Edit Conflict</h3>
+      <p>This cue was modified by another user while you were editing it.</p>
+      <div id="conflict-merged-info" class="conflict-merged-info" style="display:none;"></div>
+      <div class="conflict-columns">
+        <div class="conflict-col">
+          <h4>Your Changes</h4>
+          <div class="conflict-field"><label>Start</label><span id="conflict-my-start"></span></div>
+          <div class="conflict-field"><label>End</label><span id="conflict-my-end"></span></div>
+          <div class="conflict-field"><label>Character</label><span id="conflict-my-character"></span></div>
+          <div class="conflict-field"><label>Dialog</label><span id="conflict-my-dialog" class="conflict-dialog"></span></div>
+        </div>
+        <div class="conflict-col">
+          <h4>Current Version</h4>
+          <div class="conflict-field"><label>Start</label><span id="conflict-server-start"></span></div>
+          <div class="conflict-field"><label>End</label><span id="conflict-server-end"></span></div>
+          <div class="conflict-field"><label>Character</label><span id="conflict-server-character"></span></div>
+          <div class="conflict-field"><label>Dialog</label><span id="conflict-server-dialog" class="conflict-dialog"></span></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="conflict-save-mine">Save My Version</button>
+        <button id="conflict-discard" class="btn-secondary">Discard My Changes</button>
       </div>
     </div>
   </div>

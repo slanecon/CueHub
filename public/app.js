@@ -2,7 +2,13 @@
 let cues = [];
 let characters = [];
 let editingCueId = null;
+let editingBaseCue = null; // Snapshot of cue when editing started (for 3-way merge)
 let sseClientId = null;
+let userName = null;
+const editorsMap = {};
+let pendingConflictCueData = null;
+// Track which fields changed by the other user (for highlighting during editing)
+let changedFieldsByOther = [];
 
 // === DOM Elements ===
 const cueForm = document.getElementById('cue-form');
@@ -19,18 +25,24 @@ const addCharacterBtn = document.getElementById('add-character-btn');
 const cueTableBody = document.getElementById('cue-table-body');
 const noCuesMsg = document.getElementById('no-cues');
 
-// Character modal
 const characterModal = document.getElementById('character-modal');
 const characterForm = document.getElementById('character-form');
 const characterNameInput = document.getElementById('character-name');
 const characterModalCancel = document.getElementById('character-modal-cancel');
 
-// Confirm modal
 const confirmModal = document.getElementById('confirm-modal');
 const confirmTitle = document.getElementById('confirm-title');
 const confirmMessage = document.getElementById('confirm-message');
 const confirmYes = document.getElementById('confirm-yes');
 const confirmNo = document.getElementById('confirm-no');
+
+const nameModal = document.getElementById('name-modal');
+const nameForm = document.getElementById('name-form');
+const userNameInput = document.getElementById('user-name-input');
+
+const conflictModal = document.getElementById('conflict-modal');
+const conflictSaveMine = document.getElementById('conflict-save-mine');
+const conflictDiscard = document.getElementById('conflict-discard');
 
 // === API Helpers ===
 async function api(url, options = {}) {
@@ -39,6 +51,16 @@ async function api(url, options = {}) {
     ...options,
     body: options.body ? JSON.stringify({ ...JSON.parse(options.body), clientId: sseClientId }) : undefined,
   });
+  if (res.status === 409) {
+    const data = await res.json();
+    if (data.serverCue) {
+      const err = new Error('conflict');
+      err.serverCue = data.serverCue;
+      err.conflictingFields = data.conflictingFields || null;
+      throw err;
+    }
+    throw new Error(data.error || 'Conflict');
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Request failed' }));
     throw new Error(err.error || `HTTP ${res.status}`);
@@ -64,11 +86,18 @@ function isValidTimecode(tc) {
   return h >= 0 && h <= 99 && m >= 0 && m <= 59 && s >= 0 && s <= 59 && f >= 0 && f <= 29;
 }
 
+// === Field name helpers ===
+const fieldLabels = {
+  start_time: 'Start Time',
+  end_time: 'End Time',
+  dialog: 'Dialog',
+  character_id: 'Character',
+};
+
 // === Render ===
 function renderCharacterDropdown(selectEl, selectedId) {
   const target = selectEl || characterSelect;
   const currentVal = selectedId !== undefined ? String(selectedId) : target.value;
-  // Keep the placeholder option
   const placeholder = target.querySelector('option[value=""]');
   target.innerHTML = '';
   if (placeholder) target.appendChild(placeholder);
@@ -87,7 +116,29 @@ function renderCharacterDropdown(selectEl, selectedId) {
   if (currentVal) target.value = currentVal;
 }
 
+function getEditingRowValues() {
+  if (editingCueId === null) return null;
+  const row = cueTableBody.querySelector(`tr[data-id="${editingCueId}"]`);
+  if (!row) return null;
+  const startEl = row.querySelector('.edit-start');
+  if (!startEl) return null;
+  return {
+    start_time: startEl.value,
+    end_time: row.querySelector('.edit-end').value,
+    dialog: row.querySelector('.edit-dialog').value,
+    character_id: row.querySelector('.edit-character').value,
+  };
+}
+
+function fieldChangedHint(field) {
+  if (!changedFieldsByOther.includes(field)) return '';
+  const editor = editorsMap[editingCueId];
+  const who = editor ? editor.userName : 'Another user';
+  return `<div class="field-changed-hint">Changed by ${escapeHtml(who)}</div>`;
+}
+
 function renderCues() {
+  const savedEditValues = getEditingRowValues();
   cueTableBody.innerHTML = '';
 
   if (cues.length === 0) {
@@ -102,29 +153,58 @@ function renderCues() {
   cues.forEach(cue => {
     const tr = document.createElement('tr');
     tr.dataset.id = cue.id;
+    const editor = editorsMap[cue.id];
+    const editedByOther = editor && editor.clientId !== sseClientId;
 
     if (editingCueId === cue.id) {
       tr.classList.add('editing');
+      const vals = savedEditValues || {
+        start_time: cue.start_time,
+        end_time: cue.end_time,
+        dialog: cue.dialog,
+        character_id: cue.character_id,
+      };
+      const startChanged = changedFieldsByOther.includes('start_time') ? ' field-changed' : '';
+      const endChanged = changedFieldsByOther.includes('end_time') ? ' field-changed' : '';
+      const charChanged = changedFieldsByOther.includes('character_id') ? ' field-changed' : '';
+      const dialogChanged = changedFieldsByOther.includes('dialog') ? ' field-changed' : '';
+
       tr.innerHTML = `
-        <td><input type="text" class="edit-start" value="${escapeHtml(cue.start_time)}"></td>
-        <td><input type="text" class="edit-end" value="${escapeHtml(cue.end_time)}"></td>
-        <td><select class="edit-character"></select></td>
-        <td><textarea class="edit-dialog">${escapeHtml(cue.dialog)}</textarea></td>
+        <td class="${startChanged}">
+          <input type="text" class="edit-start" value="${escapeHtml(vals.start_time)}">
+          ${fieldChangedHint('start_time')}
+        </td>
+        <td class="${endChanged}">
+          <input type="text" class="edit-end" value="${escapeHtml(vals.end_time)}">
+          ${fieldChangedHint('end_time')}
+        </td>
+        <td class="${charChanged}">
+          <select class="edit-character"></select>
+          ${fieldChangedHint('character_id')}
+        </td>
+        <td class="${dialogChanged}">
+          <textarea class="edit-dialog">${escapeHtml(vals.dialog)}</textarea>
+          ${pendingConflictCueData ? '<div class="edit-warning">This cue was updated by another user</div>' : ''}
+          ${fieldChangedHint('dialog')}
+        </td>
         <td><div class="actions-cell">
           <button class="btn-small save-edit-btn" data-id="${cue.id}">Save</button>
           <button class="btn-small btn-secondary cancel-edit-btn">Cancel</button>
         </div></td>
       `;
-      // Populate the character dropdown in the edit row
       const editSelect = tr.querySelector('.edit-character');
-      renderCharacterDropdown(editSelect, cue.character_id);
+      renderCharacterDropdown(editSelect, vals.character_id);
     } else {
+      const badgeHtml = editedByOther
+        ? `<span class="editing-badge">${escapeHtml(editor.userName)} is editing</span>`
+        : '';
       tr.innerHTML = `
         <td>${escapeHtml(cue.start_time)}</td>
         <td>${escapeHtml(cue.end_time)}</td>
         <td>${escapeHtml(cue.character_name)}</td>
         <td>${escapeHtml(cue.dialog)}</td>
         <td><div class="actions-cell">
+          ${badgeHtml}
           <button class="btn-small edit-btn" data-id="${cue.id}">Edit</button>
           <button class="btn-small btn-danger delete-btn" data-id="${cue.id}">Delete</button>
         </div></td>
@@ -139,6 +219,38 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+function getCharacterNameById(id) {
+  const c = characters.find(ch => ch.id === Number(id));
+  return c ? c.name : 'Unknown';
+}
+
+// === Edit Status Broadcasting ===
+async function notifyEditingStart(cueId) {
+  try {
+    await api(`/api/cues/${cueId}/editing`, {
+      method: 'POST',
+      body: JSON.stringify({ userName }),
+    });
+  } catch (e) { /* non-critical */ }
+}
+
+async function notifyEditingStop(cueId) {
+  try {
+    await api(`/api/cues/${cueId}/editing`, {
+      method: 'DELETE',
+      body: JSON.stringify({}),
+    });
+  } catch (e) { /* non-critical */ }
+}
+
+// === Toast Notification ===
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3500);
 }
 
 // === Cue Form ===
@@ -175,17 +287,25 @@ cueForm.addEventListener('submit', async (e) => {
 
   try {
     if (cueIdInput.value) {
-      // Update
       body.updated_at = cueUpdatedAtInput.value;
-      await api(`/api/cues/${cueIdInput.value}`, { method: 'PUT', body: JSON.stringify(body) });
+      if (editingBaseCue) {
+        body.baseCue = editingBaseCue;
+      }
+      const result = await api(`/api/cues/${cueIdInput.value}`, { method: 'PUT', body: JSON.stringify(body) });
+      if (result.merged) {
+        showToast(`Auto-merged with other user's changes (${result.mergedFields.map(f => fieldLabels[f]).join(', ')})`);
+      }
     } else {
-      // Create
       await api('/api/cues', { method: 'POST', body: JSON.stringify(body) });
     }
     resetForm();
     await fetchCues();
   } catch (err) {
-    alert(err.message);
+    if (err.serverCue) {
+      showConflictModal(body, err.serverCue, err.conflictingFields);
+    } else {
+      alert(err.message);
+    }
   }
 });
 
@@ -194,6 +314,9 @@ function resetForm() {
   cueIdInput.value = '';
   cueUpdatedAtInput.value = '';
   editingCueId = null;
+  editingBaseCue = null;
+  pendingConflictCueData = null;
+  changedFieldsByOther = [];
   formTitle.textContent = 'Add Cue';
   submitBtn.textContent = 'Add Cue';
   cancelBtn.style.display = 'none';
@@ -225,18 +348,35 @@ cueTableBody.addEventListener('click', async (e) => {
   const id = Number(btn.dataset.id);
 
   if (btn.classList.contains('edit-btn')) {
+    if (editingCueId !== null && editingCueId !== id) {
+      notifyEditingStop(editingCueId);
+    }
+    const cue = cues.find(c => c.id === id);
     editingCueId = id;
+    editingBaseCue = { ...cue }; // Snapshot for 3-way merge
+    pendingConflictCueData = null;
+    changedFieldsByOther = [];
+    notifyEditingStart(id);
     renderCues();
   } else if (btn.classList.contains('cancel-edit-btn')) {
+    const prevId = editingCueId;
     editingCueId = null;
+    editingBaseCue = null;
+    pendingConflictCueData = null;
+    changedFieldsByOther = [];
+    if (prevId) notifyEditingStop(prevId);
     renderCues();
   } else if (btn.classList.contains('save-edit-btn')) {
     await saveInlineEdit(id);
   } else if (btn.classList.contains('delete-btn')) {
     const cue = cues.find(c => c.id === id);
+    const editor = editorsMap[id];
+    const editWarning = (editor && editor.clientId !== sseClientId)
+      ? `\n\n${editor.userName} is currently editing this cue.`
+      : '';
     showConfirm(
       'Delete Cue',
-      `Delete cue at ${cue.start_time} - "${cue.dialog.substring(0, 50)}..."?`,
+      `Delete cue at ${cue.start_time} - "${cue.dialog.substring(0, 50)}..."?${editWarning}`,
       async () => {
         try {
           await api(`/api/cues/${id}`, { method: 'DELETE', body: JSON.stringify({}) });
@@ -264,23 +404,154 @@ async function saveInlineEdit(id) {
   if (!dialog) { alert('Dialog is required'); return; }
   if (!characterId) { alert('Please select a character'); return; }
 
+  const myChanges = {
+    start_time: startTime,
+    end_time: endTime,
+    dialog,
+    character_id: characterId,
+    updated_at: editingBaseCue ? editingBaseCue.updated_at : cue.updated_at,
+  };
+
+  if (editingBaseCue) {
+    myChanges.baseCue = editingBaseCue;
+  }
+
   try {
-    await api(`/api/cues/${id}`, {
+    const result = await api(`/api/cues/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({
-        start_time: startTime,
-        end_time: endTime,
-        dialog,
-        character_id: characterId,
-        updated_at: cue.updated_at,
-      }),
+      body: JSON.stringify(myChanges),
     });
+    notifyEditingStop(id);
     editingCueId = null;
+    editingBaseCue = null;
+    pendingConflictCueData = null;
+    changedFieldsByOther = [];
+    if (result.merged) {
+      showToast(`Auto-merged with other user's changes (${result.mergedFields.map(f => fieldLabels[f]).join(', ')})`);
+    }
     await fetchCues();
   } catch (err) {
-    alert(err.message);
+    if (err.serverCue) {
+      showConflictModal(myChanges, err.serverCue, err.conflictingFields);
+    } else {
+      alert(err.message);
+    }
   }
 }
+
+// === Conflict Resolution Modal ===
+let conflictMyChanges = null;
+let conflictServerCue = null;
+let conflictFields = null;
+
+function showConflictModal(myChanges, serverCue, conflictingFields) {
+  conflictMyChanges = myChanges;
+  conflictServerCue = serverCue;
+  conflictFields = conflictingFields;
+
+  const headerEl = conflictModal.querySelector('h3');
+  const descEl = conflictModal.querySelector('p');
+  const mergedInfoEl = document.getElementById('conflict-merged-info');
+
+  if (conflictingFields && conflictingFields.length > 0) {
+    const fieldNames = conflictingFields.map(f => fieldLabels[f]).join(', ');
+    headerEl.textContent = `Conflict on: ${fieldNames}`;
+    // Show which fields were auto-merged
+    const allFields = ['start_time', 'end_time', 'dialog', 'character_id'];
+    const autoMerged = allFields.filter(f => !conflictingFields.includes(f));
+    if (autoMerged.length > 0) {
+      mergedInfoEl.textContent = `Auto-merged: ${autoMerged.map(f => fieldLabels[f]).join(', ')}`;
+      mergedInfoEl.style.display = 'block';
+    } else {
+      mergedInfoEl.style.display = 'none';
+    }
+    descEl.textContent = 'Both users changed the same field(s) to different values.';
+  } else {
+    headerEl.textContent = 'Edit Conflict';
+    descEl.textContent = 'This cue was modified by another user while you were editing it.';
+    mergedInfoEl.style.display = 'none';
+  }
+
+  // Show all fields but only highlight conflicting ones
+  const fields = [
+    { key: 'start_time', myEl: 'conflict-my-start', serverEl: 'conflict-server-start', myVal: myChanges.start_time, serverVal: serverCue.start_time },
+    { key: 'end_time', myEl: 'conflict-my-end', serverEl: 'conflict-server-end', myVal: myChanges.end_time, serverVal: serverCue.end_time },
+    { key: 'character_id', myEl: 'conflict-my-character', serverEl: 'conflict-server-character', myVal: getCharacterNameById(myChanges.character_id), serverVal: serverCue.character_name },
+    { key: 'dialog', myEl: 'conflict-my-dialog', serverEl: 'conflict-server-dialog', myVal: myChanges.dialog, serverVal: serverCue.dialog },
+  ];
+
+  fields.forEach(({ key, myEl, serverEl, myVal, serverVal }) => {
+    const my = document.getElementById(myEl);
+    const server = document.getElementById(serverEl);
+    my.textContent = myVal;
+    server.textContent = serverVal;
+
+    const isConflict = conflictingFields
+      ? conflictingFields.includes(key)
+      : myVal !== serverVal;
+    my.classList.toggle('conflict-diff', isConflict);
+    server.classList.toggle('conflict-diff', isConflict);
+
+    // Hide non-conflicting field rows when we have specific conflict info
+    const myField = my.closest('.conflict-field');
+    const serverField = server.closest('.conflict-field');
+    if (conflictingFields && !conflictingFields.includes(key)) {
+      myField.style.display = 'none';
+      serverField.style.display = 'none';
+    } else {
+      myField.style.display = '';
+      serverField.style.display = '';
+    }
+  });
+
+  conflictModal.style.display = 'flex';
+}
+
+conflictSaveMine.addEventListener('click', async () => {
+  conflictModal.style.display = 'none';
+  if (!conflictMyChanges || !conflictServerCue) return;
+
+  const body = {
+    start_time: conflictMyChanges.start_time,
+    end_time: conflictMyChanges.end_time,
+    dialog: conflictMyChanges.dialog,
+    character_id: conflictMyChanges.character_id,
+    updated_at: conflictServerCue.updated_at,
+  };
+
+  try {
+    await api(`/api/cues/${conflictServerCue.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+    if (editingCueId) notifyEditingStop(editingCueId);
+    editingCueId = null;
+    editingBaseCue = null;
+    pendingConflictCueData = null;
+    changedFieldsByOther = [];
+    resetForm();
+    await fetchCues();
+  } catch (err) {
+    alert('Save failed: ' + err.message);
+  }
+  conflictMyChanges = null;
+  conflictServerCue = null;
+  conflictFields = null;
+});
+
+conflictDiscard.addEventListener('click', async () => {
+  conflictModal.style.display = 'none';
+  if (editingCueId) notifyEditingStop(editingCueId);
+  editingCueId = null;
+  editingBaseCue = null;
+  pendingConflictCueData = null;
+  changedFieldsByOther = [];
+  conflictMyChanges = null;
+  conflictServerCue = null;
+  conflictFields = null;
+  resetForm();
+  await fetchCues();
+});
 
 // === Character Modal ===
 addCharacterBtn.addEventListener('click', () => {
@@ -347,26 +618,134 @@ function connectSSE() {
   evtSource.addEventListener('connected', (e) => {
     const data = JSON.parse(e.data);
     sseClientId = data.clientId;
+    if (data.editingState) {
+      for (const [cueId, entry] of Object.entries(data.editingState)) {
+        if (entry.clientId !== sseClientId) {
+          editorsMap[cueId] = entry;
+        }
+      }
+      renderCues();
+    }
   });
 
   evtSource.addEventListener('update', (e) => {
     const data = JSON.parse(e.data);
-    // Skip events we originated
     if (data.originClientId === sseClientId) return;
-    // Refresh data
+
+    if (data.type === 'editing-start') {
+      editorsMap[data.cueId] = { userName: data.userName, clientId: data.originClientId };
+      renderCues();
+      return;
+    }
+
+    if (data.type === 'editing-stop') {
+      delete editorsMap[data.cueId];
+      renderCues();
+      return;
+    }
+
     if (data.entity === 'character') {
       fetchCharacters();
     }
+
+    // If someone deleted the cue we're editing, exit edit mode and notify
+    if (editingCueId !== null && data.type === 'deleted' && data.entity === 'cue' && data.id === editingCueId) {
+      editingCueId = null;
+      editingBaseCue = null;
+      pendingConflictCueData = null;
+      changedFieldsByOther = [];
+      resetForm();
+      showToast('The cue you were editing was deleted by another user');
+      fetchCues();
+      return;
+    }
+
+    // If we're editing the cue that was just updated, preserve edits + highlight changed fields
+    if (editingCueId !== null && data.type === 'updated' && data.id === editingCueId) {
+      api(`/api/cues/${data.id}`).then(serverCue => {
+        pendingConflictCueData = serverCue;
+        // Compare server cue against our base to find which fields the other user changed
+        if (editingBaseCue) {
+          changedFieldsByOther = [];
+          const fields = ['start_time', 'end_time', 'dialog', 'character_id'];
+          for (const field of fields) {
+            if (String(serverCue[field]) !== String(editingBaseCue[field])) {
+              changedFieldsByOther.push(field);
+            }
+          }
+        }
+        const idx = cues.findIndex(c => c.id === data.id);
+        if (idx !== -1) cues[idx] = serverCue;
+        renderCues();
+      }).catch(() => {});
+      return;
+    }
+
     fetchCues();
   });
 
-  evtSource.onerror = () => {
-    // EventSource auto-reconnects
-  };
+  evtSource.onerror = () => {};
 }
+
+// === Name Prompt & User Info ===
+const userInfo = document.getElementById('user-info');
+const userDisplay = document.getElementById('user-display');
+const logoutBtn = document.getElementById('logout-btn');
+
+function showUserInfo() {
+  userDisplay.textContent = userName;
+  userInfo.style.display = 'flex';
+}
+
+function promptForName() {
+  return new Promise((resolve) => {
+    const sessionName = sessionStorage.getItem('userName');
+    if (sessionName) {
+      userName = sessionName;
+      showUserInfo();
+      resolve();
+      return;
+    }
+    const lastUsed = localStorage.getItem('userName');
+    if (lastUsed) {
+      userNameInput.value = lastUsed;
+    }
+    nameModal.style.display = 'flex';
+    nameForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = userNameInput.value.trim();
+      if (!name) return;
+      userName = name;
+      sessionStorage.setItem('userName', name);
+      localStorage.setItem('userName', name);
+      nameModal.style.display = 'none';
+      showUserInfo();
+      resolve();
+    }, { once: true });
+  });
+}
+
+logoutBtn.addEventListener('click', () => {
+  if (editingCueId !== null) {
+    notifyEditingStop(editingCueId);
+    editingCueId = null;
+    editingBaseCue = null;
+    pendingConflictCueData = null;
+    changedFieldsByOther = [];
+  }
+  resetForm();
+  sessionStorage.removeItem('userName');
+  userName = null;
+  userInfo.style.display = 'none';
+  promptForName().then(() => {
+    fetchCues();
+    fetchCharacters();
+  });
+});
 
 // === Init ===
 async function init() {
+  await promptForName();
   await Promise.all([fetchCues(), fetchCharacters()]);
   connectSSE();
 }

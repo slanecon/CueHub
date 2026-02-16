@@ -40,6 +40,19 @@ db.exec(`
 
 // --- SSE ---
 const sseClients = new Set();
+// In-memory map of who's editing which cue: { cueId: { userName, clientId, startedAt } }
+const editingCues = new Map();
+
+// Clean stale editing entries older than 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [cueId, entry] of editingCues) {
+    if (now - entry.startedAt > 5 * 60 * 1000) {
+      editingCues.delete(cueId);
+      broadcast({ type: 'editing-stop', cueId: Number(cueId) }, entry.clientId);
+    }
+  }
+}, 60 * 1000);
 
 app.get('/api/events', (req, res) => {
   res.writeHead(200, {
@@ -53,11 +66,22 @@ app.get('/api/events', (req, res) => {
   const client = { id: clientId, res };
   sseClients.add(client);
 
-  // Send client its ID so it can ignore its own events
-  res.write(`event: connected\ndata: ${JSON.stringify({ clientId })}\n\n`);
+  // Send client its ID and current editing state
+  const editingState = {};
+  for (const [cueId, entry] of editingCues) {
+    editingState[cueId] = { userName: entry.userName, clientId: entry.clientId };
+  }
+  res.write(`event: connected\ndata: ${JSON.stringify({ clientId, editingState })}\n\n`);
 
   req.on('close', () => {
     sseClients.delete(client);
+    // Clean up any editing entries for this client
+    for (const [cueId, entry] of editingCues) {
+      if (entry.clientId === clientId) {
+        editingCues.delete(cueId);
+        broadcast({ type: 'editing-stop', cueId: Number(cueId) }, clientId);
+      }
+    }
   });
 });
 
@@ -67,6 +91,24 @@ function broadcast(event, originClientId) {
     client.res.write(`event: update\ndata: ${data}\n\n`);
   }
 }
+
+// --- Editing Status API ---
+
+app.post('/api/cues/:id/editing', (req, res) => {
+  const cueId = Number(req.params.id);
+  const { userName, clientId } = req.body;
+  editingCues.set(String(cueId), { userName, clientId, startedAt: Date.now() });
+  broadcast({ type: 'editing-start', cueId, userName }, clientId);
+  res.json({ success: true });
+});
+
+app.delete('/api/cues/:id/editing', (req, res) => {
+  const cueId = Number(req.params.id);
+  const { clientId } = req.body || {};
+  editingCues.delete(String(cueId));
+  broadcast({ type: 'editing-stop', cueId }, clientId);
+  res.json({ success: true });
+});
 
 // --- Characters API ---
 
@@ -150,31 +192,82 @@ app.post('/api/cues', (req, res) => {
 });
 
 app.put('/api/cues/:id', (req, res) => {
-  const { start_time, end_time, dialog, character_id, updated_at, clientId } = req.body;
+  const { start_time, end_time, dialog, character_id, updated_at, baseCue, clientId } = req.body;
   const id = Number(req.params.id);
+  const mergeFields = ['start_time', 'end_time', 'dialog', 'character_id'];
 
-  // Optimistic locking
-  const existing = db.prepare('SELECT updated_at FROM cues WHERE id = ?').get(id);
-  if (!existing) {
-    return res.status(404).json({ error: 'Cue not found' });
-  }
-  if (updated_at && existing.updated_at !== updated_at) {
-    return res.status(409).json({ error: 'Cue was modified by another user. Please refresh and try again.' });
-  }
-
-  const now = new Date().toISOString();
-  db.prepare(
-    'UPDATE cues SET start_time = ?, end_time = ?, dialog = ?, character_id = ?, updated_at = ? WHERE id = ?'
-  ).run(start_time, end_time, dialog, Number(character_id), now, id);
-
-  const cue = db.prepare(`
+  const getCueWithName = (cueId) => db.prepare(`
     SELECT cues.*, characters.name AS character_name
     FROM cues
     JOIN characters ON cues.character_id = characters.id
     WHERE cues.id = ?
-  `).get(id);
-  broadcast({ type: 'updated', entity: 'cue', id }, clientId);
-  res.json(cue);
+  `).get(cueId);
+
+  const existing = db.prepare('SELECT * FROM cues WHERE id = ?').get(id);
+  if (!existing) {
+    return res.status(404).json({ error: 'Cue not found' });
+  }
+
+  const mine = { start_time, end_time, dialog, character_id: Number(character_id) };
+
+  // No conflict — timestamps match, just save
+  if (!updated_at || existing.updated_at === updated_at) {
+    const now = new Date().toISOString();
+    db.prepare(
+      'UPDATE cues SET start_time = ?, end_time = ?, dialog = ?, character_id = ?, updated_at = ? WHERE id = ?'
+    ).run(mine.start_time, mine.end_time, mine.dialog, mine.character_id, now, id);
+    const cue = getCueWithName(id);
+    broadcast({ type: 'updated', entity: 'cue', id }, clientId);
+    return res.json(cue);
+  }
+
+  // Conflict detected — attempt 3-way merge if baseCue is provided
+  if (baseCue) {
+    const theirs = existing;
+    const merged = {};
+    const conflictingFields = [];
+    const mergedFields = [];
+
+    for (const field of mergeFields) {
+      const baseVal = String(baseCue[field]);
+      const mineVal = String(mine[field]);
+      const theirsVal = String(theirs[field]);
+
+      if (mineVal === baseVal) {
+        // User didn't change this field — keep theirs
+        merged[field] = theirs[field];
+      } else if (theirsVal === baseVal) {
+        // Other user didn't change this field — keep mine
+        merged[field] = mine[field];
+        mergedFields.push(field);
+      } else if (mineVal === theirsVal) {
+        // Both changed to the same value — no conflict
+        merged[field] = mine[field];
+      } else {
+        // Both changed to different values — real conflict
+        conflictingFields.push(field);
+      }
+    }
+
+    if (conflictingFields.length === 0) {
+      // Auto-merge succeeded
+      const now = new Date().toISOString();
+      db.prepare(
+        'UPDATE cues SET start_time = ?, end_time = ?, dialog = ?, character_id = ?, updated_at = ? WHERE id = ?'
+      ).run(merged.start_time, merged.end_time, merged.dialog, Number(merged.character_id), now, id);
+      const cue = getCueWithName(id);
+      broadcast({ type: 'updated', entity: 'cue', id }, clientId);
+      return res.json({ ...cue, merged: true, mergedFields });
+    }
+
+    // Field-level conflict — return only the conflicting fields
+    const serverCue = getCueWithName(id);
+    return res.status(409).json({ error: 'conflict', serverCue, conflictingFields });
+  }
+
+  // No baseCue provided — fall back to full conflict
+  const serverCue = getCueWithName(id);
+  return res.status(409).json({ error: 'conflict', serverCue });
 });
 
 app.delete('/api/cues/:id', (req, res) => {
