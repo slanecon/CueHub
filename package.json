@@ -1,7 +1,7 @@
 {
-  "name": "sound-cue-manager",
+  "name": "cue-hub",
   "version": "1.0.0",
-  "description": "Sound editing cue manager for LAN deployment",
+  "description": "Sound editing cue management for LAN deployment",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

@@ -1,0 +1,62 @@
+name: CueHub
+options:
+  bundleIdPrefix: com.slanecon
+  deploymentTarget:
+    macOS: "15.0"
+  xcodeVersion: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: "7.0.0"
+  Swifter:
+    url: https://github.com/httpswift/swifter
+    from: "1.5.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
+
+targets:
+  CueHub:
+    type: application
+    platform: macOS
+    sources:
+      - path: CueHub
+        excludes:
+          - "**/.DS_Store"
+          - "Resources/Web/**"
+      - path: CueHub/Resources/Web/index.html
+        buildPhase: resources
+        type: file
+      - path: CueHub/Resources/Web/app.js
+        buildPhase: resources
+        type: file
+      - path: CueHub/Resources/Web/style.css
+        buildPhase: resources
+        type: file
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.slanecon.CueHub
+        PRODUCT_NAME: CueHub
+        INFOPLIST_FILE: CueHub/Info.plist
+        GENERATE_INFOPLIST_FILE: false
+        SWIFT_VERSION: "5.0"
+        MACOSX_DEPLOYMENT_TARGET: "15.0"
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_APP_SANDBOX: NO
+        COMBINE_HIDPI_IMAGES: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: CueHub/CueHub.entitlements
+        LD_RUNPATH_SEARCH_PATHS:
+          - "@executable_path/../Frameworks"
+    dependencies:
+      - sdk: Cocoa.framework
+      - sdk: WebKit.framework
+      - sdk: Network.framework
+      - package: GRDB
+      - package: Swifter

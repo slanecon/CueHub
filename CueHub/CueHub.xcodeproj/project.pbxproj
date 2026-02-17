@@ -1,0 +1,546 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0B67A8E062334D158965B94F /* SSEBroadcaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A71A49DFF0B8904575510E /* SSEBroadcaster.swift */; };
+		0C6B2C8744E201CC3E4B1124 /* app.js in Resources */ = {isa = PBXBuildFile; fileRef = 0E4184C2E187F0037765F1A2 /* app.js */; };
+		0F47AA7B2393F56F23C4F70E /* Swifter in Frameworks */ = {isa = PBXBuildFile; productRef = 519B3EDBD3D74FADFD829267 /* Swifter */; };
+		150FECF59F52FF0BEBD98403 /* EmbeddedServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19FE226B49F4940E6A84418C /* EmbeddedServer.swift */; };
+		1BB12379687C4D035D64E268 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 962732B1FFCF6C0B2D2E6F11 /* Assets.xcassets */; };
+		1CEB8786EA574361CA4EC966 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97B38FC5F4A1BFE734D2C458 /* AppDelegate.swift */; };
+		3E78EB7C80342F9ABCCE0FF1 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = C6F13E90FCE22A07091AE9BD /* GRDB */; };
+		46000FA7E28F07D4C13B5FF0 /* CueHubApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DE37D5A2034E149892406BD /* CueHubApp.swift */; };
+		5723F4DB3CE2A354457B8ACC /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DF953FBC628D9C04890E2BF1 /* WebKit.framework */; };
+		5FD7974E84BE400F752BF956 /* LocalCharacter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CEF1D5108C039D9B05DEF9 /* LocalCharacter.swift */; };
+		6E448F749722A30DAD513FB6 /* SyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEA2FB4A9160272BEEBFEAA /* SyncEngine.swift */; };
+		71EED4A887A0077B1B2066D4 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8067268E3D6AE92902E3CCCF /* AppSettings.swift */; };
+		819D6C4E7DB2E6CC13A551DF /* ChangeLogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119C22D2326DEB4160A2455F /* ChangeLogEntry.swift */; };
+		85CAAEB36A68945938BDAB13 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3FD1FA73C64EF0BF2EC51EA1 /* Cocoa.framework */; };
+		883BB7020FEE39A7D2ACDBD0 /* style.css in Resources */ = {isa = PBXBuildFile; fileRef = A7CD69EA6911F65AFA881E03 /* style.css */; };
+		8F8972BCEB3E0490F469558C /* ConnectivityMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA276F677280DDD77BE6513 /* ConnectivityMonitor.swift */; };
+		930585BB49C09E5452F749AE /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05E0E1A52D79F97A91795854 /* PreferencesWindowController.swift */; };
+		A08DF87B55719C635F92F40D /* WebViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CDA58AEA9D60C145004D824 /* WebViewController.swift */; };
+		AF871B64B7A69DE6F3E643FD /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4DDF5B2C44C803DB864BE9 /* MainWindowController.swift */; };
+		BDDAD8C9230C516D9BB0D7F6 /* RemoteSSEListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DD17CC24E7F45AEB1BFCDA0 /* RemoteSSEListener.swift */; };
+		CD4A539DB3CA29FA86362EC2 /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E44260767BB099C89951B8C /* AppDatabase.swift */; };
+		D7C5C0FA0F17EEBF1F912641 /* StatusBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F68473CD58EDE57210BA8A /* StatusBarView.swift */; };
+		E75FCDEEDBA11C024543910A /* LocalCue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D777B97FF96F9A9F3762C2F8 /* LocalCue.swift */; };
+		F138B4E952ACE9EE49DFE97A /* index.html in Resources */ = {isa = PBXBuildFile; fileRef = 886F9095325218D93F6C5D44 /* index.html */; };
+		F2193A25B8BDBCCDDFA11B65 /* RequestRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0AEA9C985A505AAEF9F5AF5 /* RequestRouter.swift */; };
+		FDA7B8AF80FE298E85D48FD1 /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8178344CBD6F0BE3B5561161 /* Network.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		05E0E1A52D79F97A91795854 /* PreferencesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindowController.swift; sourceTree = "<group>"; };
+		0C2CF6AFD5E060F8EE5BB146 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		0E4184C2E187F0037765F1A2 /* app.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = app.js; sourceTree = "<group>"; };
+		0E44260767BB099C89951B8C /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabase.swift; sourceTree = "<group>"; };
+		119C22D2326DEB4160A2455F /* ChangeLogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeLogEntry.swift; sourceTree = "<group>"; };
+		19FE226B49F4940E6A84418C /* EmbeddedServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbeddedServer.swift; sourceTree = "<group>"; };
+		2D94DD55DB0DADDB8A382C12 /* CueHub.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CueHub.entitlements; sourceTree = "<group>"; };
+		33A71A49DFF0B8904575510E /* SSEBroadcaster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEBroadcaster.swift; sourceTree = "<group>"; };
+		3FD1FA73C64EF0BF2EC51EA1 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		4B4DDF5B2C44C803DB864BE9 /* MainWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowController.swift; sourceTree = "<group>"; };
+		50F68473CD58EDE57210BA8A /* StatusBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarView.swift; sourceTree = "<group>"; };
+		59821C1D8DE2E7AF20A6A332 /* CueHub.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CueHub.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5CDA58AEA9D60C145004D824 /* WebViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewController.swift; sourceTree = "<group>"; };
+		5DD17CC24E7F45AEB1BFCDA0 /* RemoteSSEListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSSEListener.swift; sourceTree = "<group>"; };
+		5DE37D5A2034E149892406BD /* CueHubApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CueHubApp.swift; sourceTree = "<group>"; };
+		75CEF1D5108C039D9B05DEF9 /* LocalCharacter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalCharacter.swift; sourceTree = "<group>"; };
+		7DEA2FB4A9160272BEEBFEAA /* SyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngine.swift; sourceTree = "<group>"; };
+		8067268E3D6AE92902E3CCCF /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		8178344CBD6F0BE3B5561161 /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
+		886F9095325218D93F6C5D44 /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = index.html; sourceTree = "<group>"; };
+		962732B1FFCF6C0B2D2E6F11 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		97B38FC5F4A1BFE734D2C458 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A7CD69EA6911F65AFA881E03 /* style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = style.css; sourceTree = "<group>"; };
+		CCA276F677280DDD77BE6513 /* ConnectivityMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectivityMonitor.swift; sourceTree = "<group>"; };
+		D777B97FF96F9A9F3762C2F8 /* LocalCue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalCue.swift; sourceTree = "<group>"; };
+		DF953FBC628D9C04890E2BF1 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		F0AEA9C985A505AAEF9F5AF5 /* RequestRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestRouter.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		641FACCA02CECDBAA506FE3E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				85CAAEB36A68945938BDAB13 /* Cocoa.framework in Frameworks */,
+				5723F4DB3CE2A354457B8ACC /* WebKit.framework in Frameworks */,
+				FDA7B8AF80FE298E85D48FD1 /* Network.framework in Frameworks */,
+				3E78EB7C80342F9ABCCE0FF1 /* GRDB in Frameworks */,
+				0F47AA7B2393F56F23C4F70E /* Swifter in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3EB15BF381984860109F7350 /* Shell */ = {
+			isa = PBXGroup;
+			children = (
+				4B4DDF5B2C44C803DB864BE9 /* MainWindowController.swift */,
+				50F68473CD58EDE57210BA8A /* StatusBarView.swift */,
+			);
+			path = Shell;
+			sourceTree = "<group>";
+		};
+		4778EE01AFD112B948E52C40 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				59821C1D8DE2E7AF20A6A332 /* CueHub.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6231B30B18FEF0D0E7899F4E /* Database */ = {
+			isa = PBXGroup;
+			children = (
+				0E44260767BB099C89951B8C /* AppDatabase.swift */,
+				B7B265A231C5AD2FFDB41EE0 /* Models */,
+			);
+			path = Database;
+			sourceTree = "<group>";
+		};
+		68686DE4DB71A50D1D3A816A /* App */ = {
+			isa = PBXGroup;
+			children = (
+				97B38FC5F4A1BFE734D2C458 /* AppDelegate.swift */,
+				5DE37D5A2034E149892406BD /* CueHubApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		80DF111AC3CD0626DAB46485 = {
+			isa = PBXGroup;
+			children = (
+				CC0459DA2E944C0FED762074 /* CueHub */,
+				F0EE466BA51C89649F98B154 /* Frameworks */,
+				4778EE01AFD112B948E52C40 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A0A568CCE9B3BC43DE930AFC /* WebView */ = {
+			isa = PBXGroup;
+			children = (
+				5CDA58AEA9D60C145004D824 /* WebViewController.swift */,
+			);
+			path = WebView;
+			sourceTree = "<group>";
+		};
+		AFA4217A6F3CAB30293B4573 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F0C2D7A79F9FCCD361FCDC6F /* Web */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		B7B265A231C5AD2FFDB41EE0 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				119C22D2326DEB4160A2455F /* ChangeLogEntry.swift */,
+				75CEF1D5108C039D9B05DEF9 /* LocalCharacter.swift */,
+				D777B97FF96F9A9F3762C2F8 /* LocalCue.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		CC0459DA2E944C0FED762074 /* CueHub */ = {
+			isa = PBXGroup;
+			children = (
+				962732B1FFCF6C0B2D2E6F11 /* Assets.xcassets */,
+				2D94DD55DB0DADDB8A382C12 /* CueHub.entitlements */,
+				0C2CF6AFD5E060F8EE5BB146 /* Info.plist */,
+				68686DE4DB71A50D1D3A816A /* App */,
+				6231B30B18FEF0D0E7899F4E /* Database */,
+				F72C74F8309F2D9018ECE20F /* EmbeddedServer */,
+				E65D4DB42BDFA1761A25649E /* Preferences */,
+				AFA4217A6F3CAB30293B4573 /* Resources */,
+				3EB15BF381984860109F7350 /* Shell */,
+				D62F7571719F907BF60BA98B /* Sync */,
+				A0A568CCE9B3BC43DE930AFC /* WebView */,
+			);
+			path = CueHub;
+			sourceTree = "<group>";
+		};
+		D62F7571719F907BF60BA98B /* Sync */ = {
+			isa = PBXGroup;
+			children = (
+				CCA276F677280DDD77BE6513 /* ConnectivityMonitor.swift */,
+				7DEA2FB4A9160272BEEBFEAA /* SyncEngine.swift */,
+			);
+			path = Sync;
+			sourceTree = "<group>";
+		};
+		E65D4DB42BDFA1761A25649E /* Preferences */ = {
+			isa = PBXGroup;
+			children = (
+				8067268E3D6AE92902E3CCCF /* AppSettings.swift */,
+				05E0E1A52D79F97A91795854 /* PreferencesWindowController.swift */,
+			);
+			path = Preferences;
+			sourceTree = "<group>";
+		};
+		F0C2D7A79F9FCCD361FCDC6F /* Web */ = {
+			isa = PBXGroup;
+			children = (
+				0E4184C2E187F0037765F1A2 /* app.js */,
+				886F9095325218D93F6C5D44 /* index.html */,
+				A7CD69EA6911F65AFA881E03 /* style.css */,
+			);
+			path = Web;
+			sourceTree = "<group>";
+		};
+		F0EE466BA51C89649F98B154 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				3FD1FA73C64EF0BF2EC51EA1 /* Cocoa.framework */,
+				8178344CBD6F0BE3B5561161 /* Network.framework */,
+				DF953FBC628D9C04890E2BF1 /* WebKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		F72C74F8309F2D9018ECE20F /* EmbeddedServer */ = {
+			isa = PBXGroup;
+			children = (
+				19FE226B49F4940E6A84418C /* EmbeddedServer.swift */,
+				5DD17CC24E7F45AEB1BFCDA0 /* RemoteSSEListener.swift */,
+				F0AEA9C985A505AAEF9F5AF5 /* RequestRouter.swift */,
+				33A71A49DFF0B8904575510E /* SSEBroadcaster.swift */,
+			);
+			path = EmbeddedServer;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2B38C0A0CBA30A9C4C772097 /* CueHub */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5853EBCCE6BA396E2D144F93 /* Build configuration list for PBXNativeTarget "CueHub" */;
+			buildPhases = (
+				AECF64656D120D16337D0A20 /* Sources */,
+				F2ADA3F6BA5BFEBA7FD75E4C /* Resources */,
+				641FACCA02CECDBAA506FE3E /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CueHub;
+			packageProductDependencies = (
+				C6F13E90FCE22A07091AE9BD /* GRDB */,
+				519B3EDBD3D74FADFD829267 /* Swifter */,
+			);
+			productName = CueHub;
+			productReference = 59821C1D8DE2E7AF20A6A332 /* CueHub.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		86CB0E6AB579EE4DE1501D31 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					2B38C0A0CBA30A9C4C772097 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 5CD024AEAF16932E4FD54CD7 /* Build configuration list for PBXProject "CueHub" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 80DF111AC3CD0626DAB46485;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6F9F6B1953E37C73C5D5C827 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				FB50160FCF180797A3D72AEF /* XCRemoteSwiftPackageReference "swifter" */,
+			);
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				2B38C0A0CBA30A9C4C772097 /* CueHub */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F2ADA3F6BA5BFEBA7FD75E4C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1BB12379687C4D035D64E268 /* Assets.xcassets in Resources */,
+				0C6B2C8744E201CC3E4B1124 /* app.js in Resources */,
+				F138B4E952ACE9EE49DFE97A /* index.html in Resources */,
+				883BB7020FEE39A7D2ACDBD0 /* style.css in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AECF64656D120D16337D0A20 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CD4A539DB3CA29FA86362EC2 /* AppDatabase.swift in Sources */,
+				1CEB8786EA574361CA4EC966 /* AppDelegate.swift in Sources */,
+				71EED4A887A0077B1B2066D4 /* AppSettings.swift in Sources */,
+				819D6C4E7DB2E6CC13A551DF /* ChangeLogEntry.swift in Sources */,
+				8F8972BCEB3E0490F469558C /* ConnectivityMonitor.swift in Sources */,
+				46000FA7E28F07D4C13B5FF0 /* CueHubApp.swift in Sources */,
+				150FECF59F52FF0BEBD98403 /* EmbeddedServer.swift in Sources */,
+				5FD7974E84BE400F752BF956 /* LocalCharacter.swift in Sources */,
+				E75FCDEEDBA11C024543910A /* LocalCue.swift in Sources */,
+				AF871B64B7A69DE6F3E643FD /* MainWindowController.swift in Sources */,
+				930585BB49C09E5452F749AE /* PreferencesWindowController.swift in Sources */,
+				BDDAD8C9230C516D9BB0D7F6 /* RemoteSSEListener.swift in Sources */,
+				F2193A25B8BDBCCDDFA11B65 /* RequestRouter.swift in Sources */,
+				0B67A8E062334D158965B94F /* SSEBroadcaster.swift in Sources */,
+				D7C5C0FA0F17EEBF1F912641 /* StatusBarView.swift in Sources */,
+				6E448F749722A30DAD513FB6 /* SyncEngine.swift in Sources */,
+				A08DF87B55719C635F92F40D /* WebViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		2A480A1ABCAD2B3A7C3AD05F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		41F28C6633783CEC67DAB3F2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = CueHub/CueHub.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CueHub/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.slanecon.CueHub;
+				PRODUCT_NAME = CueHub;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		6B3523E190E4FFBEE4149ED7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = CueHub/CueHub.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CueHub/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.slanecon.CueHub;
+				PRODUCT_NAME = CueHub;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		E8CE301743AC7E5C877B92CC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5853EBCCE6BA396E2D144F93 /* Build configuration list for PBXNativeTarget "CueHub" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6B3523E190E4FFBEE4149ED7 /* Debug */,
+				41F28C6633783CEC67DAB3F2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5CD024AEAF16932E4FD54CD7 /* Build configuration list for PBXProject "CueHub" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E8CE301743AC7E5C877B92CC /* Debug */,
+				2A480A1ABCAD2B3A7C3AD05F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6F9F6B1953E37C73C5D5C827 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.0.0;
+			};
+		};
+		FB50160FCF180797A3D72AEF /* XCRemoteSwiftPackageReference "swifter" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/httpswift/swifter";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.5.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		519B3EDBD3D74FADFD829267 /* Swifter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FB50160FCF180797A3D72AEF /* XCRemoteSwiftPackageReference "swifter" */;
+			productName = Swifter;
+		};
+		C6F13E90FCE22A07091AE9BD /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6F9F6B1953E37C73C5D5C827 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 86CB0E6AB579EE4DE1501D31 /* Project object */;
+}
