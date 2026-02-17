@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+public/app.js
+desktop/CueHub/Resources/Web/app.js
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Xcode
+desktop/DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# macOS
+.DS_Store
