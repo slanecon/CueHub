@@ -4,11 +4,23 @@
   "description": "Sound editing cue management for LAN deployment",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "ts-node --project tsconfig.server.json server.ts",
+    "build": "esbuild src/app.ts --bundle --outfile=public/app.js --target=es2020",
+    "build:copy": "npm run build && cp public/app.js desktop/CueHub/Resources/Web/app.js",
+    "build:server": "tsc --project tsconfig.server.json",
+    "typecheck": "tsc --noEmit && tsc --project tsconfig.server.json --noEmit"
   },
   "dependencies": {
     "express": "^4.21.0",
     "better-sqlite3": "^11.7.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "ts-node": "^10.0.0",
+    "esbuild": "^0.24.0",
+    "@types/express": "^4.17.0",
+    "@types/better-sqlite3": "^7.0.0",
+    "@types/node": "^22.0.0"
   },
   "license": "MIT"
 }

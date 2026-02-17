@@ -1,105 +1,130 @@
+import type { Cue, Character, EditorEntry, SSEEvent, CueResponse, HealthResponse } from './types';
+
+// === Window extensions ===
+declare global {
+  interface Window {
+    NATIVE_API_BASE?: string;
+    _nativeSSEHandler?: (json: string) => void;
+    nativeBridge?: {
+      triggerToolbarAction?: (action: string) => void;
+      setConnectionStatus?: (status: string) => void;
+      onSelectionChanged?: (selected: number, total: number) => void;
+    };
+  }
+}
+
+// Custom error for 409 conflict responses
+class ConflictError extends Error {
+  serverCue: Cue;
+  conflictingFields: string[] | null;
+  constructor(serverCue: Cue, conflictingFields: string[] | null) {
+    super('conflict');
+    this.serverCue = serverCue;
+    this.conflictingFields = conflictingFields;
+  }
+}
+
 // === Config ===
-const API_BASE = window.NATIVE_API_BASE || '';
+const API_BASE = window.NATIVE_API_BASE ?? '';
 
 // === State ===
-let cues = [];
-let characters = [];
-let editingCueId = null;
-let editingBaseCue = null;
-let sseClientId = null;
-let userName = null;
-const editorsMap = {};
-let pendingConflictCueData = null;
-let changedFieldsByOther = [];
-let selectedIds = new Set();
+let cues: Cue[] = [];
+let characters: Character[] = [];
+let editingCueId: string | null = null;
+let editingBaseCue: Cue | null = null;
+let sseClientId: string | null = null;
+let userName: string | null = null;
+const editorsMap: Record<string, EditorEntry> = {};
+let pendingConflictCueData: Cue | null = null;
+let changedFieldsByOther: string[] = [];
+let selectedIds = new Set<string>();
 
 // === DOM Elements ===
-const cueTableBody = document.getElementById('cue-table-body');
-const noCuesMsg = document.getElementById('no-cues');
-const cueTable = document.getElementById('cue-table');
-const statusText = document.getElementById('status-text');
+const cueTableBody = document.getElementById('cue-table-body') as HTMLTableSectionElement;
+const noCuesMsg = document.getElementById('no-cues') as HTMLElement;
+const cueTable = document.getElementById('cue-table') as HTMLElement;
+const statusText = document.getElementById('status-text') as HTMLElement;
 
 // Cue modal elements
-const cueModal = document.getElementById('cue-modal');
-const cueModalTitle = document.getElementById('cue-modal-title');
-const cueForm = document.getElementById('cue-form');
-const cueIdInput = document.getElementById('cue-id');
-const cueUpdatedAtInput = document.getElementById('cue-updated-at');
-const startTimeInput = document.getElementById('start-time');
-const endTimeInput = document.getElementById('end-time');
-const dialogInput = document.getElementById('dialog');
-const characterSelect = document.getElementById('character-select');
-const submitBtn = document.getElementById('submit-btn');
-const cueModalCancel = document.getElementById('cue-modal-cancel');
-const addCharacterBtn = document.getElementById('add-character-btn');
-const inputReel = document.getElementById('input-reel');
-const inputScene = document.getElementById('input-scene');
-const inputCueName = document.getElementById('input-cue-name');
-const inputNotes = document.getElementById('input-notes');
-const inputStatus = document.getElementById('input-status');
-const inputPriority = document.getElementById('input-priority');
+const cueModal = document.getElementById('cue-modal') as HTMLElement;
+const cueModalTitle = document.getElementById('cue-modal-title') as HTMLElement;
+const cueForm = document.getElementById('cue-form') as HTMLFormElement;
+const cueIdInput = document.getElementById('cue-id') as HTMLInputElement;
+const cueUpdatedAtInput = document.getElementById('cue-updated-at') as HTMLInputElement;
+const startTimeInput = document.getElementById('start-time') as HTMLInputElement;
+const endTimeInput = document.getElementById('end-time') as HTMLInputElement;
+const dialogInput = document.getElementById('dialog') as HTMLTextAreaElement;
+const characterSelect = document.getElementById('character-select') as HTMLSelectElement;
+const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+const cueModalCancel = document.getElementById('cue-modal-cancel') as HTMLElement;
+const addCharacterBtn = document.getElementById('add-character-btn') as HTMLElement;
+const inputReel = document.getElementById('input-reel') as HTMLInputElement;
+const inputScene = document.getElementById('input-scene') as HTMLInputElement;
+const inputCueName = document.getElementById('input-cue-name') as HTMLInputElement;
+const inputNotes = document.getElementById('input-notes') as HTMLTextAreaElement;
+const inputStatus = document.getElementById('input-status') as HTMLSelectElement;
+const inputPriority = document.getElementById('input-priority') as HTMLSelectElement;
 
-const characterModal = document.getElementById('character-modal');
-const characterForm = document.getElementById('character-form');
-const characterNameInput = document.getElementById('character-name');
-const characterModalCancel = document.getElementById('character-modal-cancel');
+const characterModal = document.getElementById('character-modal') as HTMLElement;
+const characterForm = document.getElementById('character-form') as HTMLFormElement;
+const characterNameInput = document.getElementById('character-name') as HTMLInputElement;
+const characterModalCancel = document.getElementById('character-modal-cancel') as HTMLElement;
 
-const confirmModal = document.getElementById('confirm-modal');
-const confirmTitle = document.getElementById('confirm-title');
-const confirmMessage = document.getElementById('confirm-message');
-const confirmYes = document.getElementById('confirm-yes');
-const confirmNo = document.getElementById('confirm-no');
+const confirmModal = document.getElementById('confirm-modal') as HTMLElement;
+const confirmTitle = document.getElementById('confirm-title') as HTMLElement;
+const confirmMessage = document.getElementById('confirm-message') as HTMLElement;
+const confirmYes = document.getElementById('confirm-yes') as HTMLElement;
+const confirmNo = document.getElementById('confirm-no') as HTMLElement;
 
-const nameModal = document.getElementById('name-modal');
-const nameForm = document.getElementById('name-form');
-const userNameInput = document.getElementById('user-name-input');
+const nameModal = document.getElementById('name-modal') as HTMLElement;
+const nameForm = document.getElementById('name-form') as HTMLFormElement;
+const userNameInput = document.getElementById('user-name-input') as HTMLInputElement;
 
-const conflictModal = document.getElementById('conflict-modal');
-const conflictSaveMine = document.getElementById('conflict-save-mine');
-const conflictDiscard = document.getElementById('conflict-discard');
+const conflictModal = document.getElementById('conflict-modal') as HTMLElement;
+const conflictSaveMine = document.getElementById('conflict-save-mine') as HTMLElement;
+const conflictDiscard = document.getElementById('conflict-discard') as HTMLElement;
 
 // Toolbar
-const tbAdd = document.getElementById('tb-add');
-const tbDuplicate = document.getElementById('tb-duplicate');
-const tbEdit = document.getElementById('tb-edit');
-const tbDelete = document.getElementById('tb-delete');
+const tbAdd = document.getElementById('tb-add') as HTMLElement;
+const tbDuplicate = document.getElementById('tb-duplicate') as HTMLElement;
+const tbEdit = document.getElementById('tb-edit') as HTMLElement;
+const tbDelete = document.getElementById('tb-delete') as HTMLElement;
 
 // === API Helpers ===
-async function api(url, options = {}) {
+async function api<T = unknown>(url: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(API_BASE + url, {
     headers: { 'Content-Type': 'application/json' },
     ...options,
-    body: options.body ? JSON.stringify({ ...JSON.parse(options.body), clientId: sseClientId }) : undefined,
+    body: options.body
+      ? JSON.stringify({ ...JSON.parse(options.body as string), clientId: sseClientId })
+      : undefined,
   });
   if (res.status === 409) {
-    const data = await res.json();
+    const data = await res.json() as { serverCue?: Cue; conflictingFields?: string[]; error?: string };
     if (data.serverCue) {
-      const err = new Error('conflict');
-      err.serverCue = data.serverCue;
-      err.conflictingFields = data.conflictingFields || null;
-      throw err;
+      throw new ConflictError(data.serverCue, data.conflictingFields ?? null);
     }
-    throw new Error(data.error || 'Conflict');
+    throw new Error(data.error ?? 'Conflict');
   }
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    const err = await res.json().catch(() => ({ error: 'Request failed' })) as { error?: string };
+    throw new Error(err.error ?? `HTTP ${res.status}`);
   }
-  return res.json();
+  return res.json() as Promise<T>;
 }
 
-async function fetchCues() {
-  cues = await api('/api/cues');
+async function fetchCues(): Promise<void> {
+  cues = await api<Cue[]>('/api/cues');
   renderCues();
 }
 
-async function fetchCharacters() {
-  characters = await api('/api/characters');
+async function fetchCharacters(): Promise<void> {
+  characters = await api<Character[]>('/api/characters');
   renderCharacterDropdown();
 }
 
 // === Timecode Validation ===
-function isValidTimecode(tc) {
+function isValidTimecode(tc: string): boolean {
   const match = tc.match(/^(\d{1,2}):(\d{2}):(\d{2}):(\d{2})$/);
   if (!match) return false;
   const [, h, m, s, f] = match.map(Number);
@@ -107,7 +132,7 @@ function isValidTimecode(tc) {
 }
 
 // === Field name helpers ===
-const fieldLabels = {
+const fieldLabels: Record<string, string> = {
   start_time: 'Start Time',
   end_time: 'End Time',
   dialog: 'Dialog',
@@ -121,13 +146,14 @@ const fieldLabels = {
 };
 
 // === Render ===
-function renderCharacterDropdown(selectEl, selectedId) {
-  const target = selectEl || characterSelect;
+function renderCharacterDropdown(selectEl?: HTMLSelectElement, selectedId?: string): void {
+  const target = selectEl ?? characterSelect;
   const currentVal = selectedId !== undefined ? String(selectedId) : target.value;
-  const placeholder = target.querySelector('option[value=""]');
+  const placeholder = target.querySelector<HTMLOptionElement>('option[value=""]');
   target.innerHTML = '';
-  if (placeholder) target.appendChild(placeholder);
-  else {
+  if (placeholder) {
+    target.appendChild(placeholder);
+  } else {
     const opt = document.createElement('option');
     opt.value = '';
     opt.textContent = 'Select character...';
@@ -142,34 +168,36 @@ function renderCharacterDropdown(selectEl, selectedId) {
   if (currentVal) target.value = currentVal;
 }
 
-function getEditingRowValues() {
+type CueFormFields = Pick<Cue, 'start_time' | 'end_time' | 'dialog' | 'character_id' | 'reel' | 'scene' | 'cue_name' | 'notes' | 'status' | 'priority'>;
+
+function getEditingRowValues(): CueFormFields | null {
   if (editingCueId === null) return null;
-  const row = cueTableBody.querySelector(`tr[data-id="${editingCueId}"]`);
+  const row = cueTableBody.querySelector<HTMLTableRowElement>(`tr[data-id="${editingCueId}"]`);
   if (!row) return null;
-  const startEl = row.querySelector('.edit-start');
+  const startEl = row.querySelector<HTMLInputElement>('.edit-start');
   if (!startEl) return null;
   return {
     start_time: startEl.value,
-    end_time: row.querySelector('.edit-end').value,
-    dialog: row.querySelector('.edit-dialog').value,
-    character_id: row.querySelector('.edit-character').value,
-    reel: row.querySelector('.edit-reel').value,
-    scene: row.querySelector('.edit-scene').value,
-    cue_name: row.querySelector('.edit-cue-name').value,
-    notes: row.querySelector('.edit-notes').value,
-    status: row.querySelector('.edit-status').value,
-    priority: row.querySelector('.edit-priority').value,
+    end_time: row.querySelector<HTMLInputElement>('.edit-end')!.value,
+    dialog: row.querySelector<HTMLTextAreaElement>('.edit-dialog')!.value,
+    character_id: row.querySelector<HTMLSelectElement>('.edit-character')!.value,
+    reel: row.querySelector<HTMLInputElement>('.edit-reel')!.value,
+    scene: row.querySelector<HTMLInputElement>('.edit-scene')!.value,
+    cue_name: row.querySelector<HTMLInputElement>('.edit-cue-name')!.value,
+    notes: row.querySelector<HTMLTextAreaElement>('.edit-notes')!.value,
+    status: row.querySelector<HTMLSelectElement>('.edit-status')!.value as Cue['status'],
+    priority: row.querySelector<HTMLSelectElement>('.edit-priority')!.value as Cue['priority'],
   };
 }
 
-function fieldChangedHint(field) {
+function fieldChangedHint(field: string): string {
   if (!changedFieldsByOther.includes(field)) return '';
-  const editor = editorsMap[editingCueId];
+  const editor = editingCueId ? editorsMap[editingCueId] : undefined;
   const who = editor ? editor.userName : 'Another user';
   return `<div class="field-changed-hint">Changed by ${escapeHtml(who)}</div>`;
 }
 
-function renderCues() {
+function renderCues(): void {
   const savedEditValues = getEditingRowValues();
   cueTableBody.innerHTML = '';
 
@@ -195,22 +223,22 @@ function renderCues() {
 
     if (editingCueId === cue.id) {
       tr.classList.add('editing');
-      const vals = savedEditValues || {
-        reel: cue.reel || '',
-        scene: cue.scene || '',
-        cue_name: cue.cue_name || '',
+      const vals: CueFormFields = savedEditValues ?? {
+        reel: cue.reel ?? '',
+        scene: cue.scene ?? '',
+        cue_name: cue.cue_name ?? '',
         start_time: cue.start_time,
         end_time: cue.end_time,
         dialog: cue.dialog,
         character_id: cue.character_id,
-        notes: cue.notes || '',
-        status: cue.status || 'Spotted',
-        priority: cue.priority || 'Medium',
+        notes: cue.notes ?? '',
+        status: cue.status ?? 'Spotted',
+        priority: cue.priority ?? 'Medium',
       };
 
-      const statusOpts = ['Spotted','Recorded','Approved','Rejected'].map(s =>
+      const statusOpts = ['spotted' , 'printed' , 'approved' , 'recorded' , 'transferred' , 'cut' , 'premixed' , 'final mixed'].map(s =>
         `<option value="${s}"${vals.status === s ? ' selected' : ''}>${s}</option>`).join('');
-      const prtyOpts = ['Low','Medium','High','Urgent'].map(p =>
+      const prtyOpts = ['lowest' , 'low' , 'medium' , 'high' , 'highest'].map(p =>
         `<option value="${p}"${vals.priority === p ? ' selected' : ''}>${p}</option>`).join('');
 
       tr.innerHTML = `
@@ -246,7 +274,7 @@ function renderCues() {
           </div>
         </td>
       `;
-      const editSelect = tr.querySelector('.edit-character');
+      const editSelect = tr.querySelector<HTMLSelectElement>('.edit-character')!;
       renderCharacterDropdown(editSelect, vals.character_id);
     } else {
       const badgeHtml = editedByOther
@@ -255,12 +283,12 @@ function renderCues() {
       tr.innerHTML = `
         <td>${escapeHtml(cue.reel || '--')}</td>
         <td>${escapeHtml(cue.scene || '--')}</td>
-        <td>${escapeHtml(cue.cue_name || '')}</td>
+        <td>${escapeHtml(cue.cue_name ?? '')}</td>
         <td>${escapeHtml(cue.start_time)}</td>
         <td>${escapeHtml(cue.character_name)}${badgeHtml}</td>
         <td>${escapeHtml(cue.dialog)}</td>
-        <td>${escapeHtml(cue.notes || '')}</td>
-        <td>${escapeHtml(cue.status || 'Spotted')}<br>${escapeHtml(cue.priority || 'Medium')}</td>
+        <td>${escapeHtml(cue.notes ?? '')}</td>
+        <td>${escapeHtml(cue.status ?? 'Spotted')}<br>${escapeHtml(cue.priority ?? 'Medium')}</td>
       `;
     }
 
@@ -270,42 +298,39 @@ function renderCues() {
   updateStatusBar();
 }
 
-function updateStatusBar() {
+function updateStatusBar(): void {
   const total = cues.length;
   const selCount = selectedIds.size;
   statusText.textContent = `${selCount} of ${total} selected`;
-  // Notify native bridge if present
-  if (window.nativeBridge && window.nativeBridge.onSelectionChanged) {
+  if (window.nativeBridge?.onSelectionChanged) {
     window.nativeBridge.onSelectionChanged(selCount, total);
   }
 }
 
-function escapeHtml(str) {
+function escapeHtml(str: unknown): string {
   if (str == null) return '';
   const div = document.createElement('div');
-  div.textContent = str;
+  div.textContent = String(str);
   return div.innerHTML;
 }
 
-function getCharacterNameById(id) {
-  const c = characters.find(ch => ch.id === id || ch.id === Number(id));
+function getCharacterNameById(id: string): string {
+  const c = characters.find(ch => ch.id === id);
   return c ? c.name : 'Unknown';
 }
 
 // === Row Selection ===
-cueTableBody.addEventListener('click', (e) => {
-  const tr = e.target.closest('tr');
-  if (!tr || !tr.dataset.id) return;
+cueTableBody.addEventListener('click', (e: MouseEvent) => {
+  const tr = (e.target as Element).closest('tr') as HTMLTableRowElement | null;
+  if (!tr?.dataset.id) return;
 
-  // Don't select when clicking edit controls
-  if (e.target.closest('button, input, textarea, select')) return;
+  if ((e.target as Element).closest('button, input, textarea, select')) return;
 
   const id = tr.dataset.id;
 
   if (e.shiftKey && selectedIds.size > 0) {
-    // Range select
     const allIds = cues.map(c => c.id);
-    const lastSelected = [...selectedIds].pop();
+    const lastSelected = [...selectedIds].pop()!;
     const fromIdx = allIds.indexOf(lastSelected);
     const toIdx = allIds.indexOf(id);
     if (fromIdx !== -1 && toIdx !== -1) {
@@ -315,11 +340,9 @@ cueTableBody.addEventListener('click', (e) => {
       }
     }
   } else if (e.metaKey || e.ctrlKey) {
-    // Toggle single
     if (selectedIds.has(id)) selectedIds.delete(id);
     else selectedIds.add(id);
   } else {
-    // Single select
     selectedIds.clear();
     selectedIds.add(id);
   }
@@ -328,27 +351,27 @@ cueTableBody.addEventListener('click', (e) => {
 });
 
 // === Edit Status Broadcasting ===
-async function notifyEditingStart(cueId) {
+async function notifyEditingStart(cueId: string): Promise<void> {
   try {
     await api(`/api/cues/${cueId}/editing`, {
       method: 'POST',
       body: JSON.stringify({ userName }),
     });
-  } catch (e) { /* non-critical */ }
+  } catch { /* non-critical */ }
 }
 
-async function notifyEditingStop(cueId) {
+async function notifyEditingStop(cueId: string): Promise<void> {
   try {
     await api(`/api/cues/${cueId}/editing`, {
       method: 'DELETE',
       body: JSON.stringify({}),
     });
-  } catch (e) { /* non-critical */ }
+  } catch { /* non-critical */ }
 }
 
 // === Toast Notification ===
-function showToast(message) {
-  const toast = document.getElementById('toast');
+function showToast(message: string): void {
+  const toast = document.getElementById('toast') as HTMLElement;
   toast.textContent = message;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 3500);
@@ -360,23 +383,23 @@ tbDuplicate.addEventListener('click', () => duplicateSelectedCue());
 tbEdit.addEventListener('click', () => editSelectedCue());
 tbDelete.addEventListener('click', () => deleteSelectedCues());
 
-function openCueModal(cue) {
+function openCueModal(cue?: Cue): void {
   cueForm.reset();
   if (cue) {
     cueModalTitle.textContent = 'Edit Cue';
     submitBtn.textContent = 'Update Cue';
     cueIdInput.value = cue.id;
     cueUpdatedAtInput.value = cue.updated_at;
-    inputReel.value = cue.reel || '';
-    inputScene.value = cue.scene || '';
-    inputCueName.value = cue.cue_name || '';
+    inputReel.value = cue.reel ?? '';
+    inputScene.value = cue.scene ?? '';
+    inputCueName.value = cue.cue_name ?? '';
     startTimeInput.value = cue.start_time;
     endTimeInput.value = cue.end_time;
     characterSelect.value = cue.character_id;
     dialogInput.value = cue.dialog;
-    inputNotes.value = cue.notes || '';
-    inputStatus.value = cue.status || 'Spotted';
-    inputPriority.value = cue.priority || 'Medium';
+    inputNotes.value = cue.notes ?? '';
+    inputStatus.value = cue.status ?? 'Spotted';
+    inputPriority.value = cue.priority ?? 'Medium';
   } else {
     cueModalTitle.textContent = 'Add Cue';
     submitBtn.textContent = 'Add Cue';
@@ -392,11 +415,11 @@ cueModalCancel.addEventListener('click', () => {
   cueModal.style.display = 'none';
 });
 
-cueModal.addEventListener('click', (e) => {
+cueModal.addEventListener('click', (e: MouseEvent) => {
   if (e.target === cueModal) cueModal.style.display = 'none';
 });
 
-function duplicateSelectedCue() {
+function duplicateSelectedCue(): void {
   if (selectedIds.size !== 1) {
     showToast('Select exactly one cue to duplicate');
     return;
@@ -404,27 +427,26 @@ function duplicateSelectedCue() {
   const id = [...selectedIds][0];
   const cue = cues.find(c => c.id === id);
   if (!cue) return;
-  // Open add modal pre-filled with cue data but no ID
   cueForm.reset();
   cueModalTitle.textContent = 'Add Cue (Duplicate)';
   submitBtn.textContent = 'Add Cue';
   cueIdInput.value = '';
   cueUpdatedAtInput.value = '';
-  inputReel.value = cue.reel || '';
-  inputScene.value = cue.scene || '';
-  inputCueName.value = cue.cue_name || '';
+  inputReel.value = cue.reel ?? '';
+  inputScene.value = cue.scene ?? '';
+  inputCueName.value = cue.cue_name ?? '';
   startTimeInput.value = cue.start_time;
   endTimeInput.value = cue.end_time;
   characterSelect.value = cue.character_id;
   dialogInput.value = cue.dialog;
-  inputNotes.value = cue.notes || '';
-  inputStatus.value = cue.status || 'Spotted';
-  inputPriority.value = cue.priority || 'Medium';
+  inputNotes.value = cue.notes ?? '';
+  inputStatus.value = cue.status ?? 'Spotted';
+  inputPriority.value = cue.priority ?? 'Medium';
   cueModal.style.display = 'flex';
   inputReel.focus();
 }
 
-function editSelectedCue() {
+function editSelectedCue(): void {
   if (selectedIds.size !== 1) {
     showToast('Select exactly one cue to edit');
     return;
@@ -444,7 +466,7 @@ function editSelectedCue() {
   renderCues();
 }
 
-function deleteSelectedCues() {
+function deleteSelectedCues(): void {
   if (selectedIds.size === 0) {
     showToast('Select at least one cue to delete');
     return;
@@ -453,13 +475,12 @@ function deleteSelectedCues() {
   const count = ids.length;
   const firstCue = cues.find(c => c.id === ids[0]);
   const preview = count === 1
-    ? `Delete cue "${(firstCue.dialog || '').substring(0, 40)}..."?`
+    ? `Delete cue "${(firstCue?.dialog ?? '').substring(0, 40)}..."?`
     : `Delete ${count} selected cues?`;
 
-  // Check if any are being edited by others
   const editWarnings = ids
     .map(id => editorsMap[id])
-    .filter(e => e && e.clientId !== sseClientId)
+    .filter((e): e is EditorEntry => !!e && e.clientId !== sseClientId)
     .map(e => e.userName);
   const extra = editWarnings.length > 0
     ? `\n\n${editWarnings.join(', ')} ${editWarnings.length === 1 ? 'is' : 'are'} currently editing.`
@@ -473,13 +494,13 @@ function deleteSelectedCues() {
       selectedIds.clear();
       await fetchCues();
     } catch (err) {
-      alert(err.message);
+      alert((err as Error).message);
     }
   });
 }
 
 // === Cue Form Submit (modal) ===
-cueForm.addEventListener('submit', async (e) => {
+cueForm.addEventListener('submit', async (e: SubmitEvent) => {
   e.preventDefault();
 
   const startTime = startTimeInput.value.trim();
@@ -508,7 +529,7 @@ cueForm.addEventListener('submit', async (e) => {
     return;
   }
 
-  const body = {
+  const body: CueFormFields & { updated_at?: string; baseCue?: Cue } = {
     start_time: startTime,
     end_time: endTime,
     dialog,
@@ -517,22 +538,20 @@ cueForm.addEventListener('submit', async (e) => {
     scene: inputScene.value.trim(),
     cue_name: inputCueName.value.trim(),
     notes: inputNotes.value.trim(),
-    status: inputStatus.value,
-    priority: inputPriority.value,
+    status: inputStatus.value as Cue['status'],
+    priority: inputPriority.value as Cue['priority'],
   };
 
   try {
     if (cueIdInput.value) {
       body.updated_at = cueUpdatedAtInput.value;
-      if (editingBaseCue) {
-        body.baseCue = editingBaseCue;
-      }
-      const result = await api(`/api/cues/${cueIdInput.value}`, { method: 'PUT', body: JSON.stringify(body) });
+      if (editingBaseCue) body.baseCue = editingBaseCue;
+      const result = await api<CueResponse>(`/api/cues/${cueIdInput.value}`, { method: 'PUT', body: JSON.stringify(body) });
       if (result.merged) {
-        showToast(`Auto-merged with other user's changes (${result.mergedFields.map(f => fieldLabels[f]).join(', ')})`);
+        showToast(`Auto-merged with other user's changes (${result.mergedFields!.map(f => fieldLabels[f]).join(', ')})`);
       }
     } else {
-      await api('/api/cues', { method: 'POST', body: JSON.stringify(body) });
+      await api<Cue>('/api/cues', { method: 'POST', body: JSON.stringify(body) });
     }
     cueModal.style.display = 'none';
     editingCueId = null;
@@ -541,23 +560,23 @@ cueForm.addEventListener('submit', async (e) => {
     changedFieldsByOther = [];
     await fetchCues();
   } catch (err) {
-    if (err.serverCue) {
+    if (err instanceof ConflictError) {
       cueModal.style.display = 'none';
       showConflictModal(body, err.serverCue, err.conflictingFields);
     } else {
-      alert(err.message);
+      alert((err as Error).message);
     }
   }
 });
 
 // === Table Inline Edit Actions (event delegation) ===
-cueTableBody.addEventListener('click', async (e) => {
-  const btn = e.target.closest('button');
+cueTableBody.addEventListener('click', async (e: MouseEvent) => {
+  const btn = (e.target as Element).closest<HTMLButtonElement>('button');
   if (!btn) return;
 
   const id = btn.dataset.id;
 
-  if (btn.classList.contains('save-edit-btn')) {
+  if (btn.classList.contains('save-edit-btn') && id) {
     e.stopPropagation();
     await saveInlineEdit(id);
   } else if (btn.classList.contains('cancel-edit-btn')) {
@@ -573,10 +592,10 @@ cueTableBody.addEventListener('click', async (e) => {
 });
 
 // Double-click to edit
-cueTableBody.addEventListener('dblclick', (e) => {
-  if (e.target.closest('button, input, textarea, select')) return;
-  const tr = e.target.closest('tr');
-  if (!tr || !tr.dataset.id) return;
+cueTableBody.addEventListener('dblclick', (e: MouseEvent) => {
+  if ((e.target as Element).closest('button, input, textarea, select')) return;
+  const tr = (e.target as Element).closest<HTMLTableRowElement>('tr');
+  if (!tr?.dataset.id) return;
   const id = tr.dataset.id;
   const cue = cues.find(c => c.id === id);
   if (!cue) return;
@@ -592,14 +611,14 @@ cueTableBody.addEventListener('dblclick', (e) => {
   renderCues();
 });
 
-async function saveInlineEdit(id) {
-  const row = cueTableBody.querySelector(`tr[data-id="${id}"]`);
+async function saveInlineEdit(id: string): Promise<void> {
+  const row = cueTableBody.querySelector<HTMLTableRowElement>(`tr[data-id="${id}"]`);
   if (!row) return;
 
-  const startTime = row.querySelector('.edit-start').value.trim();
-  const endTime = row.querySelector('.edit-end').value.trim();
-  const dialog = row.querySelector('.edit-dialog').value.trim();
-  const characterId = row.querySelector('.edit-character').value;
+  const startTime = row.querySelector<HTMLInputElement>('.edit-start')!.value.trim();
+  const endTime = row.querySelector<HTMLInputElement>('.edit-end')!.value.trim();
+  const dialog = row.querySelector<HTMLTextAreaElement>('.edit-dialog')!.value.trim();
+  const characterId = row.querySelector<HTMLSelectElement>('.edit-character')!.value;
   const cue = cues.find(c => c.id === id);
 
   if (!isValidTimecode(startTime)) { alert('Invalid start time format'); return; }
@@ -607,26 +626,24 @@ async function saveInlineEdit(id) {
   if (!dialog) { alert('Dialog is required'); return; }
   if (!characterId) { alert('Please select a character'); return; }
 
-  const myChanges = {
+  const myChanges: CueFormFields & { updated_at: string; baseCue?: Cue } = {
     start_time: startTime,
     end_time: endTime,
     dialog,
     character_id: characterId,
-    reel: row.querySelector('.edit-reel').value.trim(),
-    scene: row.querySelector('.edit-scene').value.trim(),
-    cue_name: row.querySelector('.edit-cue-name').value.trim(),
-    notes: row.querySelector('.edit-notes').value.trim(),
-    status: row.querySelector('.edit-status').value,
-    priority: row.querySelector('.edit-priority').value,
-    updated_at: editingBaseCue ? editingBaseCue.updated_at : cue.updated_at,
+    reel: row.querySelector<HTMLInputElement>('.edit-reel')!.value.trim(),
+    scene: row.querySelector<HTMLInputElement>('.edit-scene')!.value.trim(),
+    cue_name: row.querySelector<HTMLInputElement>('.edit-cue-name')!.value.trim(),
+    notes: row.querySelector<HTMLTextAreaElement>('.edit-notes')!.value.trim(),
+    status: row.querySelector<HTMLSelectElement>('.edit-status')!.value as Cue['status'],
+    priority: row.querySelector<HTMLSelectElement>('.edit-priority')!.value as Cue['priority'],
+    updated_at: editingBaseCue?.updated_at ?? cue?.updated_at ?? '',
   };
 
-  if (editingBaseCue) {
-    myChanges.baseCue = editingBaseCue;
-  }
+  if (editingBaseCue) myChanges.baseCue = editingBaseCue;
 
   try {
-    const result = await api(`/api/cues/${id}`, {
+    const result = await api<CueResponse>(`/api/cues/${id}`, {
       method: 'PUT',
       body: JSON.stringify(myChanges),
     });
@@ -636,39 +653,42 @@ async function saveInlineEdit(id) {
     pendingConflictCueData = null;
     changedFieldsByOther = [];
     if (result.merged) {
-      showToast(`Auto-merged with other user's changes (${result.mergedFields.map(f => fieldLabels[f]).join(', ')})`);
+      showToast(`Auto-merged with other user's changes (${result.mergedFields!.map(f => fieldLabels[f]).join(', ')})`);
     }
     await fetchCues();
   } catch (err) {
-    if (err.serverCue) {
+    if (err instanceof ConflictError) {
       showConflictModal(myChanges, err.serverCue, err.conflictingFields);
     } else {
-      alert(err.message);
+      alert((err as Error).message);
     }
   }
 }
 
 // === Conflict Resolution Modal ===
-let conflictMyChanges = null;
-let conflictServerCue = null;
-let conflictFields = null;
+let conflictMyChanges: (CueFormFields & { updated_at?: string; baseCue?: Cue }) | null = null;
+let conflictServerCue: Cue | null = null;
 
-function showConflictModal(myChanges, serverCue, conflictingFields) {
+function showConflictModal(
+  myChanges: CueFormFields & { updated_at?: string; baseCue?: Cue },
+  serverCue: Cue,
+  conflictingFields?: string[] | null
+): void {
   conflictMyChanges = myChanges;
   conflictServerCue = serverCue;
-  conflictFields = conflictingFields;
 
-  const headerEl = conflictModal.querySelector('h3');
-  const descEl = conflictModal.querySelector('p');
-  const mergedInfoEl = document.getElementById('conflict-merged-info');
+
+  const headerEl = conflictModal.querySelector('h3') as HTMLElement;
+  const descEl = conflictModal.querySelector('p') as HTMLElement;
+  const mergedInfoEl = document.getElementById('conflict-merged-info') as HTMLElement;
 
   if (conflictingFields && conflictingFields.length > 0) {
-    const fieldNames = conflictingFields.map(f => fieldLabels[f] || f).join(', ');
+    const fieldNames = conflictingFields.map(f => fieldLabels[f] ?? f).join(', ');
     headerEl.textContent = `Conflict on: ${fieldNames}`;
     const allFields = ['start_time', 'end_time', 'dialog', 'character_id', 'reel', 'scene', 'cue_name', 'notes', 'status', 'priority'];
     const autoMerged = allFields.filter(f => !conflictingFields.includes(f));
     if (autoMerged.length > 0) {
-      mergedInfoEl.textContent = `Auto-merged: ${autoMerged.map(f => fieldLabels[f] || f).join(', ')}`;
+      mergedInfoEl.textContent = `Auto-merged: ${autoMerged.map(f => fieldLabels[f] ?? f).join(', ')}`;
       mergedInfoEl.style.display = 'block';
     } else {
       mergedInfoEl.style.display = 'none';
@@ -680,7 +700,13 @@ function showConflictModal(myChanges, serverCue, conflictingFields) {
     mergedInfoEl.style.display = 'none';
   }
 
-  const fields = [
+  const fields: Array<{
+    key: string;
+    myEl: string;
+    serverEl: string;
+    myVal: string;
+    serverVal: string;
+  }> = [
     { key: 'start_time', myEl: 'conflict-my-start', serverEl: 'conflict-server-start', myVal: myChanges.start_time, serverVal: serverCue.start_time },
     { key: 'end_time', myEl: 'conflict-my-end', serverEl: 'conflict-server-end', myVal: myChanges.end_time, serverVal: serverCue.end_time },
     { key: 'character_id', myEl: 'conflict-my-character', serverEl: 'conflict-server-character', myVal: getCharacterNameById(myChanges.character_id), serverVal: serverCue.character_name },
@@ -688,8 +714,8 @@ function showConflictModal(myChanges, serverCue, conflictingFields) {
   ];
 
   fields.forEach(({ key, myEl, serverEl, myVal, serverVal }) => {
-    const my = document.getElementById(myEl);
-    const server = document.getElementById(serverEl);
+    const my = document.getElementById(myEl) as HTMLElement;
+    const server = document.getElementById(serverEl) as HTMLElement;
     my.textContent = myVal;
     server.textContent = serverVal;
 
@@ -699,14 +725,14 @@ function showConflictModal(myChanges, serverCue, conflictingFields) {
     my.classList.toggle('conflict-diff', isConflict);
     server.classList.toggle('conflict-diff', isConflict);
 
-    const myField = my.closest('.conflict-field');
-    const serverField = server.closest('.conflict-field');
+    const myField = my.closest<HTMLElement>('.conflict-field');
+    const serverField = server.closest<HTMLElement>('.conflict-field');
     if (conflictingFields && !conflictingFields.includes(key)) {
-      myField.style.display = 'none';
-      serverField.style.display = 'none';
+      if (myField) myField.style.display = 'none';
+      if (serverField) serverField.style.display = 'none';
     } else {
-      myField.style.display = '';
-      serverField.style.display = '';
+      if (myField) myField.style.display = '';
+      if (serverField) serverField.style.display = '';
     }
   });
 
@@ -717,7 +743,7 @@ conflictSaveMine.addEventListener('click', async () => {
   conflictModal.style.display = 'none';
   if (!conflictMyChanges || !conflictServerCue) return;
 
-  const body = {
+  const body: CueFormFields & { updated_at: string } = {
     start_time: conflictMyChanges.start_time,
     end_time: conflictMyChanges.end_time,
     dialog: conflictMyChanges.dialog,
@@ -743,11 +769,10 @@ conflictSaveMine.addEventListener('click', async () => {
     changedFieldsByOther = [];
     await fetchCues();
   } catch (err) {
-    alert('Save failed: ' + err.message);
+    alert('Save failed: ' + (err as Error).message);
   }
   conflictMyChanges = null;
   conflictServerCue = null;
-  conflictFields = null;
 });
 
 conflictDiscard.addEventListener('click', async () => {
@@ -759,7 +784,7 @@ conflictDiscard.addEventListener('click', async () => {
   changedFieldsByOther = [];
   conflictMyChanges = null;
   conflictServerCue = null;
-  conflictFields = null;
+
   await fetchCues();
 });
 
@@ -774,29 +799,29 @@ characterModalCancel.addEventListener('click', () => {
   characterModal.style.display = 'none';
 });
 
-characterModal.addEventListener('click', (e) => {
+characterModal.addEventListener('click', (e: MouseEvent) => {
   if (e.target === characterModal) characterModal.style.display = 'none';
 });
 
-characterForm.addEventListener('submit', async (e) => {
+characterForm.addEventListener('submit', async (e: SubmitEvent) => {
   e.preventDefault();
   const name = characterNameInput.value.trim();
   if (!name) return;
 
   try {
-    const character = await api('/api/characters', { method: 'POST', body: JSON.stringify({ name }) });
+    const character = await api<Character>('/api/characters', { method: 'POST', body: JSON.stringify({ name }) });
     characterModal.style.display = 'none';
     await fetchCharacters();
     characterSelect.value = character.id;
   } catch (err) {
-    alert(err.message);
+    alert((err as Error).message);
   }
 });
 
 // === Confirm Modal ===
-let confirmCallback = null;
+let confirmCallback: (() => Promise<void>) | null = null;
 
-function showConfirm(title, message, onConfirm) {
+function showConfirm(title: string, message: string, onConfirm: () => Promise<void>): void {
   confirmTitle.textContent = title;
   confirmMessage.textContent = message;
   confirmCallback = onConfirm;
@@ -814,7 +839,7 @@ confirmNo.addEventListener('click', () => {
   confirmCallback = null;
 });
 
-confirmModal.addEventListener('click', (e) => {
+confirmModal.addEventListener('click', (e: MouseEvent) => {
   if (e.target === confirmModal) {
     confirmModal.style.display = 'none';
     confirmCallback = null;
@@ -822,10 +847,9 @@ confirmModal.addEventListener('click', (e) => {
 });
 
 // === Keyboard Shortcuts ===
-document.addEventListener('keydown', (e) => {
-  // Don't handle shortcuts when in modals or editing inputs
-  const inModal = document.querySelector('.modal-overlay[style*="flex"]');
-  const inInput = e.target.closest('input, textarea, select');
+document.addEventListener('keydown', (e: KeyboardEvent) => {
+  const inModal = document.querySelector<HTMLElement>('.modal-overlay[style*="flex"]');
+  const inInput = (e.target as Element).closest('input, textarea, select');
 
   if (e.key === 'Escape') {
     if (inModal) {
@@ -869,26 +893,26 @@ document.addEventListener('keydown', (e) => {
 
 // === SSE / Event Handling ===
 
-// Shared handler for incoming events (from SSE or native bridge)
-function handleIncomingEvent(data) {
-  // Skip own events (only relevant for SSE mode)
+function handleIncomingEvent(data: SSEEvent): void {
   if (data.originClientId === sseClientId) return;
 
   if (data.type === 'editing-start') {
-    editorsMap[data.cueId] = { userName: data.userName, clientId: data.originClientId };
+    if (data.cueId && data.userName && data.originClientId) {
+      editorsMap[data.cueId] = { userName: data.userName, clientId: data.originClientId };
+    }
     renderCues();
     return;
   }
 
   if (data.type === 'editing-stop') {
-    delete editorsMap[data.cueId];
+    if (data.cueId) delete editorsMap[data.cueId];
     renderCues();
     return;
   }
 
   if (data.type === 'connection-status') {
     console.log('[Event] Connection status:', data.online);
-    const dot = document.getElementById('connection-status');
+    const dot = document.getElementById('connection-status') as HTMLElement;
     dot.classList.toggle('conn-online', data.online === true);
     dot.classList.toggle('conn-offline', data.online !== true);
     dot.title = data.online ? 'Connected to server' : 'Offline';
@@ -903,7 +927,6 @@ function handleIncomingEvent(data) {
     fetchCharacters();
   }
 
-  // If someone deleted the cue we're editing, exit edit mode and notify
   if (editingCueId !== null && data.type === 'deleted' && data.entity === 'cue' && data.id === editingCueId) {
     editingCueId = null;
     editingBaseCue = null;
@@ -914,13 +937,12 @@ function handleIncomingEvent(data) {
     return;
   }
 
-  // If we're editing the cue that was just updated, preserve edits + highlight changed fields
   if (editingCueId !== null && data.type === 'updated' && data.id === editingCueId) {
-    api(`/api/cues/${data.id}`).then(serverCue => {
+    api<Cue>(`/api/cues/${data.id}`).then(serverCue => {
       pendingConflictCueData = serverCue;
       if (editingBaseCue) {
         changedFieldsByOther = [];
-        const fields = ['start_time', 'end_time', 'dialog', 'character_id', 'reel', 'scene', 'cue_name', 'notes', 'status', 'priority'];
+        const fields: (keyof Cue)[] = ['start_time', 'end_time', 'dialog', 'character_id', 'reel', 'scene', 'cue_name', 'notes', 'status', 'priority'];
         for (const field of fields) {
           if (String(serverCue[field] ?? '') !== String(editingBaseCue[field] ?? '')) {
             changedFieldsByOther.push(field);
@@ -938,39 +960,35 @@ function handleIncomingEvent(data) {
 }
 
 // Native bridge handler — called by Swift via evaluateJavaScript
-window._nativeSSEHandler = function(jsonString) {
+window._nativeSSEHandler = function(jsonString: string): void {
   try {
-    const data = JSON.parse(jsonString);
-    console.log('[NativeBridge] Event:', data.type || data.entity || 'unknown');
+    const data = JSON.parse(jsonString) as SSEEvent;
+    console.log('[NativeBridge] Event:', data.type ?? data.entity ?? 'unknown');
     handleIncomingEvent(data);
   } catch (e) {
     console.error('[NativeBridge] Parse error:', e);
   }
 };
 
-function connectSSE() {
+function connectSSE(): void {
   const isNative = !!window.NATIVE_API_BASE;
 
   if (isNative) {
-    // Desktop app: use native bridge for events, generate a local client ID
-    sseClientId = 'native-' + Math.random().toString(36).substr(2, 9);
+    sseClientId = 'native-' + Math.random().toString(36).substring(2, 11);
     console.log('[Event] Using native bridge for events, clientId:', sseClientId);
-    // Check initial connection status
-    api('/api/health').then(health => {
+    api<HealthResponse>('/api/health').then(health => {
       const online = health.mode === 'online' || health.mode === 'syncing';
-      handleIncomingEvent({ type: 'connection-status', online: online, originClientId: 'system' });
+      handleIncomingEvent({ type: 'connection-status', online, originClientId: 'system' });
     }).catch(() => {});
     return;
   }
 
-  // Web browser: use EventSource
   const evtSource = new EventSource(API_BASE + '/api/events');
 
-  evtSource.addEventListener('connected', (e) => {
-    const data = JSON.parse(e.data);
+  evtSource.addEventListener('connected', (e: MessageEvent) => {
+    const data = JSON.parse(e.data) as { clientId: string; editingState?: Record<string, EditorEntry> };
     sseClientId = data.clientId;
-    // Update connection indicator
-    const dot = document.getElementById('connection-status');
+    const dot = document.getElementById('connection-status') as HTMLElement;
     dot.classList.remove('conn-offline');
     dot.classList.add('conn-online');
     dot.title = 'Connected';
@@ -985,13 +1003,13 @@ function connectSSE() {
     }
   });
 
-  evtSource.addEventListener('update', (e) => {
-    const data = JSON.parse(e.data);
+  evtSource.addEventListener('update', (e: MessageEvent) => {
+    const data = JSON.parse(e.data) as SSEEvent;
     handleIncomingEvent(data);
   });
 
   evtSource.onerror = () => {
-    const dot = document.getElementById('connection-status');
+    const dot = document.getElementById('connection-status') as HTMLElement;
     dot.classList.remove('conn-online');
     dot.classList.add('conn-offline');
     dot.title = 'Disconnected';
@@ -999,16 +1017,16 @@ function connectSSE() {
 }
 
 // === Name Prompt & User Info ===
-const userInfo = document.getElementById('user-info');
-const userDisplay = document.getElementById('user-display');
-const logoutBtn = document.getElementById('logout-btn');
+const userInfo = document.getElementById('user-info') as HTMLElement;
+const userDisplay = document.getElementById('user-display') as HTMLElement;
+const logoutBtn = document.getElementById('logout-btn') as HTMLElement;
 
-function showUserInfo() {
+function showUserInfo(): void {
   userDisplay.textContent = userName;
   userInfo.style.display = 'flex';
 }
 
-function promptForName() {
+function promptForName(): Promise<void> {
   return new Promise((resolve) => {
     const sessionName = sessionStorage.getItem('userName');
     if (sessionName) {
@@ -1022,7 +1040,7 @@ function promptForName() {
       userNameInput.value = lastUsed;
     }
     nameModal.style.display = 'flex';
-    nameForm.addEventListener('submit', (e) => {
+    nameForm.addEventListener('submit', (e: SubmitEvent) => {
       e.preventDefault();
       const name = userNameInput.value.trim();
       if (!name) return;
@@ -1054,8 +1072,8 @@ logoutBtn.addEventListener('click', () => {
 });
 
 // === Native Bridge ===
-window.nativeBridge = window.nativeBridge || {};
-window.nativeBridge.triggerToolbarAction = function(action) {
+window.nativeBridge = window.nativeBridge ?? {};
+window.nativeBridge.triggerToolbarAction = function(action: string): void {
   switch (action) {
     case 'add': openCueModal(); break;
     case 'duplicate': duplicateSelectedCue(); break;
@@ -1063,15 +1081,18 @@ window.nativeBridge.triggerToolbarAction = function(action) {
     case 'delete': deleteSelectedCues(); break;
   }
 };
-window.nativeBridge.setConnectionStatus = function(status) {
-  const dot = document.getElementById('connection-status');
+window.nativeBridge.setConnectionStatus = function(status: string): void {
+  const dot = document.getElementById('connection-status') as HTMLElement;
   dot.classList.toggle('conn-online', status === 'online');
   dot.classList.toggle('conn-offline', status !== 'online');
   dot.title = status === 'online' ? 'Connected' : 'Disconnected';
 };
 
+// Unused import suppression — fieldChangedHint is rendered in innerHTML
+void fieldChangedHint;
+
 // === Init ===
-async function init() {
+async function init(): Promise<void> {
   await promptForName();
   await Promise.all([fetchCues(), fetchCharacters()]);
   connectSSE();
