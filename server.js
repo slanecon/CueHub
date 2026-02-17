@@ -48,14 +48,7 @@ function createTables() {
 createTables();
 
 // Add new columns if missing (safe to run multiple times)
-const newCueColumns = [
-  { name: 'reel', def: "TEXT DEFAULT ''" },
-  { name: 'scene', def: "TEXT DEFAULT ''" },
-  { name: 'cue_name', def: "TEXT DEFAULT ''" },
-  { name: 'notes', def: "TEXT DEFAULT ''" },
-  { name: 'status', def: "TEXT DEFAULT 'Spotted'" },
-  { name: 'priority', def: "TEXT DEFAULT 'Medium'" },
-];
+const newCueColumns = [];
 
 for (const col of newCueColumns) {
   try {
