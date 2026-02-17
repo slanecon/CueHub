@@ -78,7 +78,7 @@ func renderIcon(pixelSize: Int, outputPath: String) {
 
 let basePath = CommandLine.arguments.count > 1
     ? CommandLine.arguments[1]
-    : "ADRCueManager/ADRCueManager/Assets.xcassets/AppIcon.appiconset"
+    : "CueHub/CueHub/Assets.xcassets/AppIcon.appiconset"
 
 // macOS icon sizes — pixel dimensions for each entry
 // For @1x, pixel size = point size. For @2x, pixel size = point size * 2.

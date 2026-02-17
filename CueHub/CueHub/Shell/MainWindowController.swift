@@ -19,7 +19,7 @@ class MainWindowController: NSWindowController, NSToolbarDelegate {
         let contentRect = NSRect(x: 0, y: 0, width: 1200, height: 700)
         let styleMask: NSWindow.StyleMask = [.titled, .closable, .miniaturizable, .resizable]
         let window = NSWindow(contentRect: contentRect, styleMask: styleMask, backing: .buffered, defer: false)
-        window.title = "ADR Cue List"
+        window.title = "Cue Hub"
         window.minSize = NSSize(width: 1024, height: 500)
         window.center()
         window.isReleasedWhenClosed = false

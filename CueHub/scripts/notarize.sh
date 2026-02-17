@@ -1,9 +1,9 @@
 #!/bin/bash
-# Notarization script for ADR Cue Manager
+# Notarization script for Cue Hub
 # Prerequisites:
 #   - Xcode installed with "Developer ID Application" certificate
 #   - App Store Connect API key or Apple ID credentials stored in Keychain
-#   - Run from the ADRCueManager/ project directory
+#   - Run from the CueHub/ project directory
 #
 # Usage:
 #   ./scripts/notarize.sh
@@ -13,12 +13,12 @@
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-SCHEME="ADRCueManager"
-ARCHIVE_PATH="$PROJECT_DIR/build/ADRCueManager.xcarchive"
+SCHEME="CueHub"
+ARCHIVE_PATH="$PROJECT_DIR/build/CueHub.xcarchive"
 EXPORT_PATH="$PROJECT_DIR/build/export"
 EXPORT_OPTIONS="$PROJECT_DIR/ExportOptions.plist"
-APP_PATH="$EXPORT_PATH/ADRCueManager.app"
-ZIP_PATH="$PROJECT_DIR/build/ADRCueManager.zip"
+APP_PATH="$EXPORT_PATH/CueHub.app"
+ZIP_PATH="$PROJECT_DIR/build/CueHub.zip"
 
 # Parse optional arguments
 TEAM_ID=""
@@ -39,7 +39,7 @@ mkdir -p "$PROJECT_DIR/build"
 
 echo "=== Step 2: Archive ==="
 ARCHIVE_CMD=(xcodebuild archive
-    -project "$PROJECT_DIR/ADRCueManager.xcodeproj"
+    -project "$PROJECT_DIR/CueHub.xcodeproj"
     -scheme "$SCHEME"
     -archivePath "$ARCHIVE_PATH"
     -configuration Release
@@ -84,4 +84,4 @@ echo "=== Done! ==="
 echo "Notarized app: $APP_PATH"
 echo ""
 echo "To create a DMG for distribution:"
-echo "  hdiutil create -volname 'ADR Cue Manager' -srcfolder '$EXPORT_PATH' -ov -format UDZO '$PROJECT_DIR/build/ADRCueManager.dmg'"
+echo "  hdiutil create -volname 'Cue Hub' -srcfolder '$EXPORT_PATH' -ov -format UDZO '$PROJECT_DIR/build/CueHub.dmg'"

@@ -43,11 +43,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // App menu
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "About ADR Cue Manager", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: "About Cue Hub", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(NSMenuItem.separator())
         appMenu.addItem(withTitle: "Preferences...", action: #selector(showPreferences), keyEquivalent: ",")
         appMenu.addItem(NSMenuItem.separator())
-        appMenu.addItem(withTitle: "Quit ADR Cue Manager", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Quit Cue Hub", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appMenuItem.submenu = appMenu
         mainMenu.addItem(appMenuItem)
 
@@ -85,7 +85,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Help menu
         let helpMenuItem = NSMenuItem()
         let helpMenu = NSMenu(title: "Help")
-        helpMenu.addItem(withTitle: "ADR Cue Manager Help", action: nil, keyEquivalent: "")
+        helpMenu.addItem(withTitle: "Cue Hub Help", action: nil, keyEquivalent: "")
         helpMenuItem.submenu = helpMenu
         mainMenu.addItem(helpMenuItem)
 

@@ -313,5 +313,5 @@ app.delete('/api/cues/:id', (req, res) => {
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Sound Cue Manager running at http://localhost:${PORT}`);
+  console.log(`Cue Hub running at http://localhost:${PORT}`);
 });
