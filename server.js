@@ -13,59 +13,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Database setup
 const db = new Database(path.join(__dirname, 'database.db'));
 db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = OFF'); // Off during migration, re-enabled after
-
-// === Schema Migration ===
-
-// Check if we need to migrate from INTEGER to TEXT (UUID) primary keys
-function needsUuidMigration() {
-  const info = db.prepare("PRAGMA table_info(characters)").all();
-  if (info.length === 0) return false; // Table doesn't exist yet
-  const idCol = info.find(c => c.name === 'id');
-  return idCol && idCol.type === 'INTEGER';
-}
-
-function migrateToUuids() {
-  console.log('Migrating database to UUID primary keys...');
-
-  const backup = db.prepare("SELECT * FROM characters").all();
-  const cueBackup = db.prepare("SELECT * FROM cues").all();
-
-  // Build ID maps: old integer -> new UUID
-  const charIdMap = {};
-  for (const c of backup) {
-    charIdMap[c.id] = crypto.randomUUID();
-  }
-
-  // Drop old tables (order matters for FK)
-  db.exec('DROP TABLE IF EXISTS cues');
-  db.exec('DROP TABLE IF EXISTS characters');
-
-  // Create new tables with TEXT PKs (done by createTables below)
-  createTables();
-
-  // Re-insert characters with UUIDs
-  const insertChar = db.prepare('INSERT INTO characters (id, name, created_at) VALUES (?, ?, ?)');
-  for (const c of backup) {
-    insertChar.run(charIdMap[c.id], c.name, c.created_at);
-  }
-
-  // Re-insert cues with UUIDs and mapped character IDs
-  const insertCue = db.prepare(`
-    INSERT INTO cues (id, start_time, end_time, dialog, character_id, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  for (const c of cueBackup) {
-    const newCharId = charIdMap[c.character_id];
-    if (!newCharId) {
-      console.warn(`Skipping cue ${c.id}: character_id ${c.character_id} not found in map`);
-      continue;
-    }
-    insertCue.run(crypto.randomUUID(), c.start_time, c.end_time, c.dialog, newCharId, c.created_at, c.updated_at);
-  }
-
-  console.log(`Migrated ${backup.length} characters and ${cueBackup.length} cues to UUIDs`);
-}
+db.pragma('foreign_keys = ON');
 
 function createTables() {
   db.exec(`
@@ -97,14 +45,9 @@ function createTables() {
   `);
 }
 
-// Run migration or create fresh tables
-if (needsUuidMigration()) {
-  migrateToUuids();
-} else {
-  createTables();
-}
+createTables();
 
-// Add new columns to existing UUID tables (safe to run multiple times)
+// Add new columns if missing (safe to run multiple times)
 const newCueColumns = [
   { name: 'reel', def: "TEXT DEFAULT ''" },
   { name: 'scene', def: "TEXT DEFAULT ''" },
@@ -121,9 +64,6 @@ for (const col of newCueColumns) {
     // Column already exists — ignore
   }
 }
-
-// Re-enable foreign keys
-db.pragma('foreign_keys = ON');
 
 // --- SSE ---
 const sseClients = new Set();
