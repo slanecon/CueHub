@@ -50,6 +50,8 @@ targets:
         ENABLE_HARDENED_RUNTIME: YES
         ENABLE_APP_SANDBOX: NO
         COMBINE_HIDPI_IMAGES: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: ADRCueManager/ADRCueManager.entitlements
         LD_RUNPATH_SEARCH_PATHS:
           - "@executable_path/../Frameworks"
     dependencies:

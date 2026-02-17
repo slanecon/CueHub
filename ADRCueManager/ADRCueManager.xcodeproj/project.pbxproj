@@ -19,6 +19,7 @@
 		6E8666401DC43E04885144C8 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = B47F289F0367EBE858A2C243 /* GRDB */; };
 		6FE9940262996302D833735B /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0FF154C6B3CC8A8C395B913 /* AppDatabase.swift */; };
 		6FF6A5317493B0DE068BD428 /* LocalCue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A253EC7CE9E9336BA77A4A7 /* LocalCue.swift */; };
+		70577322028C7C4BE6E510AB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DC7929018CEF52B97F9C4F87 /* Assets.xcassets */; };
 		709601A8E09F41F86004E908 /* app.js in Resources */ = {isa = PBXBuildFile; fileRef = 734DE71B995BDAE8D81D75C1 /* app.js */; };
 		774E38D14AFCC3C78F97561F /* style.css in Resources */ = {isa = PBXBuildFile; fileRef = DE75B40FF1021BB7CC9AF49D /* style.css */; };
 		94DC9F6F6139B55ECF0A5A1D /* RemoteSSEListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65D744C6118FEAE65BE5D7D2 /* RemoteSSEListener.swift */; };
@@ -36,6 +37,7 @@
 
 /* Begin PBXFileReference section */
 		0C1631ADA1BE4BFF839B81FB /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		0F063C88E500F260F72A917A /* ADRCueManager.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ADRCueManager.entitlements; sourceTree = "<group>"; };
 		0FC222271E6EC0957024179E /* RequestRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestRouter.swift; sourceTree = "<group>"; };
 		12C68166BB39796BB3A536F8 /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
 		3BB1C1CB73B2E5C11EBF9AFC /* LocalCharacter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalCharacter.swift; sourceTree = "<group>"; };
@@ -54,6 +56,7 @@
 		C83187322C7B5245C4C96FFF /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = index.html; sourceTree = "<group>"; };
 		C8870509F6D1F6EF5268655F /* ChangeLogEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangeLogEntry.swift; sourceTree = "<group>"; };
 		C9379AAD3DCC8F339BA7AAA3 /* PreferencesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindowController.swift; sourceTree = "<group>"; };
+		DC7929018CEF52B97F9C4F87 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		DE75B40FF1021BB7CC9AF49D /* style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = style.css; sourceTree = "<group>"; };
 		FBFA0A8F9C0092A9537696A3 /* SSEBroadcaster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEBroadcaster.swift; sourceTree = "<group>"; };
 		FCB416FC768FCA2B954C4EAC /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
@@ -81,6 +84,8 @@
 		0A8AA7B5B7D159E8D2B9ADF4 /* ADRCueManager */ = {
 			isa = PBXGroup;
 			children = (
+				0F063C88E500F260F72A917A /* ADRCueManager.entitlements */,
+				DC7929018CEF52B97F9C4F87 /* Assets.xcassets */,
 				FCF03A2BE3E9546271B60974 /* Info.plist */,
 				137469A9BF2E0987C472FA85 /* App */,
 				936EF100EAF01E55EBB28858 /* Database */,
@@ -280,6 +285,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70577322028C7C4BE6E510AB /* Assets.xcassets in Resources */,
 				709601A8E09F41F86004E908 /* app.js in Resources */,
 				AA2C94A28E613BFAA9A8BD6A /* index.html in Resources */,
 				774E38D14AFCC3C78F97561F /* style.css in Resources */,
@@ -320,6 +326,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = ADRCueManager/ADRCueManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = "";
@@ -342,6 +349,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = ADRCueManager/ADRCueManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = "";
