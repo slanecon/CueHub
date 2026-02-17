@@ -15,6 +15,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         mainWindowController = MainWindowController()
         mainWindowController?.showWindow(nil)
 
+        // Wire SSE broadcaster to deliver events directly to WKWebView
+        if let webVC = mainWindowController?.webViewController {
+            embeddedServer?.sseBroadcaster.onNativeEvent = { [weak webVC] event in
+                DispatchQueue.main.async {
+                    webVC?.dispatchEvent(event)
+                }
+            }
+        }
+
         setupMenuBar()
     }
 

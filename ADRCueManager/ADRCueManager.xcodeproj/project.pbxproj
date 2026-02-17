@@ -21,6 +21,7 @@
 		6FF6A5317493B0DE068BD428 /* LocalCue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A253EC7CE9E9336BA77A4A7 /* LocalCue.swift */; };
 		709601A8E09F41F86004E908 /* app.js in Resources */ = {isa = PBXBuildFile; fileRef = 734DE71B995BDAE8D81D75C1 /* app.js */; };
 		774E38D14AFCC3C78F97561F /* style.css in Resources */ = {isa = PBXBuildFile; fileRef = DE75B40FF1021BB7CC9AF49D /* style.css */; };
+		94DC9F6F6139B55ECF0A5A1D /* RemoteSSEListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65D744C6118FEAE65BE5D7D2 /* RemoteSSEListener.swift */; };
 		9F3177CBBC4C56146AD8BC18 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FCB416FC768FCA2B954C4EAC /* WebKit.framework */; };
 		AA2C94A28E613BFAA9A8BD6A /* index.html in Resources */ = {isa = PBXBuildFile; fileRef = C83187322C7B5245C4C96FFF /* index.html */; };
 		AC8F6304DACC343AA8FD7FFB /* StatusBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 777E154282BD3E9901B1A4A2 /* StatusBarView.swift */; };
@@ -41,6 +42,7 @@
 		3D5D76F824815C4F1E72DC2A /* MainWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowController.swift; sourceTree = "<group>"; };
 		488AADCB6EC700DD34725BB3 /* WebViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewController.swift; sourceTree = "<group>"; };
 		4EC2808E6B09A89157255702 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		65D744C6118FEAE65BE5D7D2 /* RemoteSSEListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSSEListener.swift; sourceTree = "<group>"; };
 		6A253EC7CE9E9336BA77A4A7 /* LocalCue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalCue.swift; sourceTree = "<group>"; };
 		70B8267184F19FCC998F9109 /* SyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngine.swift; sourceTree = "<group>"; };
 		734DE71B995BDAE8D81D75C1 /* app.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = app.js; sourceTree = "<group>"; };
@@ -96,6 +98,7 @@
 			isa = PBXGroup;
 			children = (
 				AE580E22C82C2996C16C50DE /* EmbeddedServer.swift */,
+				65D744C6118FEAE65BE5D7D2 /* RemoteSSEListener.swift */,
 				0FC222271E6EC0957024179E /* RequestRouter.swift */,
 				FBFA0A8F9C0092A9537696A3 /* SSEBroadcaster.swift */,
 			);
@@ -301,6 +304,7 @@
 				6FF6A5317493B0DE068BD428 /* LocalCue.swift in Sources */,
 				3B47417414D78C347887F1E1 /* MainWindowController.swift in Sources */,
 				CA7FB82FB4C4F71544D2A0D7 /* PreferencesWindowController.swift in Sources */,
+				94DC9F6F6139B55ECF0A5A1D /* RemoteSSEListener.swift in Sources */,
 				EAF7AD871D7D0D80C0E8BF09 /* RequestRouter.swift in Sources */,
 				584D99AF6274729515B4ED2A /* SSEBroadcaster.swift in Sources */,
 				AC8F6304DACC343AA8FD7FFB /* StatusBarView.swift in Sources */,

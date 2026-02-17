@@ -3,7 +3,7 @@ import WebKit
 
 class MainWindowController: NSWindowController, NSToolbarDelegate {
 
-    private var webViewController: WebViewController!
+    private(set) var webViewController: WebViewController!
     private var statusBar: StatusBarView!
 
     // Toolbar item identifiers

@@ -2,10 +2,15 @@ import Foundation
 import Swifter
 
 /// Manages SSE client connections and broadcasts events.
+/// Also supports a native callback for delivering events directly to WKWebView.
 class SSEBroadcaster {
 
     private var clients: [(id: String, writer: HttpResponseBodyWriter)] = []
     private let lock = NSLock()
+
+    /// Native event callback — delivers events directly to WKWebView via evaluateJavaScript.
+    /// Set by AppDelegate after wiring up the WebViewController.
+    var onNativeEvent: (([String: Any]) -> Void)?
 
     func addClient(id: String, writer: HttpResponseBodyWriter) {
         lock.lock()
@@ -21,8 +26,12 @@ class SSEBroadcaster {
         print("[SSE] Client disconnected: \(id)")
     }
 
-    /// Broadcast an event to all connected SSE clients
+    /// Broadcast an event to all connected SSE clients and the native bridge
     func broadcast(event: [String: Any]) {
+        // Deliver to native WKWebView bridge
+        onNativeEvent?(event)
+
+        // Deliver to SSE clients
         guard let json = try? JSONSerialization.data(withJSONObject: event),
               let str = String(data: json, encoding: .utf8) else { return }
 

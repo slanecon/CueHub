@@ -867,8 +867,103 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// === SSE ===
+// === SSE / Event Handling ===
+
+// Shared handler for incoming events (from SSE or native bridge)
+function handleIncomingEvent(data) {
+  // Skip own events (only relevant for SSE mode)
+  if (data.originClientId === sseClientId) return;
+
+  if (data.type === 'editing-start') {
+    editorsMap[data.cueId] = { userName: data.userName, clientId: data.originClientId };
+    renderCues();
+    return;
+  }
+
+  if (data.type === 'editing-stop') {
+    delete editorsMap[data.cueId];
+    renderCues();
+    return;
+  }
+
+  if (data.type === 'connection-status') {
+    console.log('[Event] Connection status:', data.online);
+    const dot = document.getElementById('connection-status');
+    dot.classList.toggle('conn-online', data.online === true);
+    dot.classList.toggle('conn-offline', data.online !== true);
+    dot.title = data.online ? 'Connected to server' : 'Offline';
+    return;
+  }
+
+  if (data.type === 'sync-progress' || data.type === 'sync-complete') {
+    return;
+  }
+
+  if (data.entity === 'character') {
+    fetchCharacters();
+  }
+
+  // If someone deleted the cue we're editing, exit edit mode and notify
+  if (editingCueId !== null && data.type === 'deleted' && data.entity === 'cue' && data.id === editingCueId) {
+    editingCueId = null;
+    editingBaseCue = null;
+    pendingConflictCueData = null;
+    changedFieldsByOther = [];
+    showToast('The cue you were editing was deleted by another user');
+    fetchCues();
+    return;
+  }
+
+  // If we're editing the cue that was just updated, preserve edits + highlight changed fields
+  if (editingCueId !== null && data.type === 'updated' && data.id === editingCueId) {
+    api(`/api/cues/${data.id}`).then(serverCue => {
+      pendingConflictCueData = serverCue;
+      if (editingBaseCue) {
+        changedFieldsByOther = [];
+        const fields = ['start_time', 'end_time', 'dialog', 'character_id', 'reel', 'scene', 'cue_name', 'notes', 'status', 'priority'];
+        for (const field of fields) {
+          if (String(serverCue[field] ?? '') !== String(editingBaseCue[field] ?? '')) {
+            changedFieldsByOther.push(field);
+          }
+        }
+      }
+      const idx = cues.findIndex(c => c.id === data.id);
+      if (idx !== -1) cues[idx] = serverCue;
+      renderCues();
+    }).catch(() => {});
+    return;
+  }
+
+  fetchCues();
+}
+
+// Native bridge handler — called by Swift via evaluateJavaScript
+window._nativeSSEHandler = function(jsonString) {
+  try {
+    const data = JSON.parse(jsonString);
+    console.log('[NativeBridge] Event:', data.type || data.entity || 'unknown');
+    handleIncomingEvent(data);
+  } catch (e) {
+    console.error('[NativeBridge] Parse error:', e);
+  }
+};
+
 function connectSSE() {
+  const isNative = !!window.NATIVE_API_BASE;
+
+  if (isNative) {
+    // Desktop app: use native bridge for events, generate a local client ID
+    sseClientId = 'native-' + Math.random().toString(36).substr(2, 9);
+    console.log('[Event] Using native bridge for events, clientId:', sseClientId);
+    // Check initial connection status
+    api('/api/health').then(health => {
+      const online = health.mode === 'online' || health.mode === 'syncing';
+      handleIncomingEvent({ type: 'connection-status', online: online, originClientId: 'system' });
+    }).catch(() => {});
+    return;
+  }
+
+  // Web browser: use EventSource
   const evtSource = new EventSource(API_BASE + '/api/events');
 
   evtSource.addEventListener('connected', (e) => {
@@ -892,56 +987,7 @@ function connectSSE() {
 
   evtSource.addEventListener('update', (e) => {
     const data = JSON.parse(e.data);
-    if (data.originClientId === sseClientId) return;
-
-    if (data.type === 'editing-start') {
-      editorsMap[data.cueId] = { userName: data.userName, clientId: data.originClientId };
-      renderCues();
-      return;
-    }
-
-    if (data.type === 'editing-stop') {
-      delete editorsMap[data.cueId];
-      renderCues();
-      return;
-    }
-
-    if (data.entity === 'character') {
-      fetchCharacters();
-    }
-
-    // If someone deleted the cue we're editing, exit edit mode and notify
-    if (editingCueId !== null && data.type === 'deleted' && data.entity === 'cue' && data.id === editingCueId) {
-      editingCueId = null;
-      editingBaseCue = null;
-      pendingConflictCueData = null;
-      changedFieldsByOther = [];
-      showToast('The cue you were editing was deleted by another user');
-      fetchCues();
-      return;
-    }
-
-    // If we're editing the cue that was just updated, preserve edits + highlight changed fields
-    if (editingCueId !== null && data.type === 'updated' && data.id === editingCueId) {
-      api(`/api/cues/${data.id}`).then(serverCue => {
-        pendingConflictCueData = serverCue;
-        if (editingBaseCue) {
-          changedFieldsByOther = [];
-          const fields = ['start_time', 'end_time', 'dialog', 'character_id', 'reel', 'scene', 'cue_name', 'notes', 'status', 'priority'];
-          for (const field of fields) {
-            if (String(serverCue[field] ?? '') !== String(editingBaseCue[field] ?? '')) {
-              changedFieldsByOther.push(field);
-            }
-          }
-        }
-        const idx = cues.findIndex(c => c.id === data.id);
-        if (idx !== -1) cues[idx] = serverCue;
-        renderCues();
-      }).catch(() => {});
-      return;
-    }
-
-    fetchCues();
+    handleIncomingEvent(data);
   });
 
   evtSource.onerror = () => {

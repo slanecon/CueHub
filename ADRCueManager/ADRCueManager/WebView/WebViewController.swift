@@ -16,6 +16,7 @@ class WebViewController: NSViewController, WKScriptMessageHandler, WKNavigationD
         userContentController.add(self, name: "selectionChanged")
         userContentController.add(self, name: "connectionStatus")
         userContentController.add(self, name: "requestPreferences")
+        userContentController.add(self, name: "consoleLog")
 
         // Inject the native bridge setup script
         let bridgeScript = WKUserScript(source: nativeBridgeJS(), injectionTime: .atDocumentStart, forMainFrameOnly: true)
@@ -60,6 +61,20 @@ class WebViewController: NSViewController, WKScriptMessageHandler, WKNavigationD
         webView.evaluateJavaScript(js, completionHandler: nil)
     }
 
+    /// Push an SSE-equivalent event directly to the WKWebView via JS bridge
+    func dispatchEvent(_ event: [String: Any]) {
+        guard let json = try? JSONSerialization.data(withJSONObject: event),
+              let str = String(data: json, encoding: .utf8) else { return }
+        // Escape for JS string literal
+        let escaped = str.replacingOccurrences(of: "\\", with: "\\\\")
+                         .replacingOccurrences(of: "'", with: "\\'")
+                         .replacingOccurrences(of: "\n", with: "\\n")
+        let js = "if (window._nativeSSEHandler) window._nativeSSEHandler('\(escaped)');"
+        DispatchQueue.main.async { [weak self] in
+            self?.webView?.evaluateJavaScript(js, completionHandler: nil)
+        }
+    }
+
     // MARK: - WKScriptMessageHandler
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -80,6 +95,10 @@ class WebViewController: NSViewController, WKScriptMessageHandler, WKNavigationD
             // Forward to app delegate
             if let appDelegate = NSApp.delegate as? AppDelegate {
                 appDelegate.perform(Selector(("showPreferences")))
+            }
+        case "consoleLog":
+            if let msg = message.body as? String {
+                print("[JS] \(msg)")
             }
         default:
             break
@@ -106,6 +125,26 @@ class WebViewController: NSViewController, WKScriptMessageHandler, WKNavigationD
         return """
         // Set API base for the web frontend — always points to the embedded server
         window.NATIVE_API_BASE = 'http://localhost:\(localPort)';
+
+        // Forward console.log to Xcode debugger
+        (function() {
+            var origLog = console.log;
+            var origError = console.error;
+            console.log = function() {
+                var msg = Array.prototype.slice.call(arguments).map(function(a) {
+                    return typeof a === 'object' ? JSON.stringify(a) : String(a);
+                }).join(' ');
+                try { window.webkit.messageHandlers.consoleLog.postMessage(msg); } catch(e) {}
+                origLog.apply(console, arguments);
+            };
+            console.error = function() {
+                var msg = 'ERROR: ' + Array.prototype.slice.call(arguments).map(function(a) {
+                    return typeof a === 'object' ? JSON.stringify(a) : String(a);
+                }).join(' ');
+                try { window.webkit.messageHandlers.consoleLog.postMessage(msg); } catch(e) {}
+                origError.apply(console, arguments);
+            };
+        })();
 
         // Override nativeBridge.onSelectionChanged to post to native
         window.addEventListener('DOMContentLoaded', function() {

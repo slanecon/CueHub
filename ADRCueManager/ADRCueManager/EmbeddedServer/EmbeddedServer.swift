@@ -12,6 +12,7 @@ class EmbeddedServer {
     private let settings = AppSettings.shared
     private let connectivityMonitor = ConnectivityMonitor()
     private let syncEngine = SyncEngine()
+    private let remoteSSEListener = RemoteSSEListener()
     private var isSyncing = false
 
     /// The local port this embedded server listens on
@@ -54,6 +55,8 @@ class EmbeddedServer {
             print("[Sync] Complete: pushed=\(result.pushed) pulled=\(result.pulled) conflicts=\(result.conflicts) errors=\(result.errors)")
             if result.success {
                 self.router.goOnline(serverURL: self.settings.remoteServerURL)
+                self.remoteSSEListener.connect(serverURL: self.settings.remoteServerURL)
+                self.sseBroadcaster.broadcastConnectionStatus(online: true)
             }
             self.sseBroadcaster.broadcast(event: [
                 "type": "sync-complete",
@@ -68,6 +71,13 @@ class EmbeddedServer {
             ])
         }
 
+        // Configure remote SSE listener to forward server.js events to local broadcaster
+        remoteSSEListener.onEvent = { [weak self] event in
+            guard let self = self else { return }
+            // Forward to native bridge (WKWebView) and any local SSE clients
+            self.sseBroadcaster.broadcast(event: event)
+        }
+
         // Start connectivity monitoring
         connectivityMonitor.onStatusChanged = { [weak self] online in
             guard let self = self else { return }
@@ -75,6 +85,7 @@ class EmbeddedServer {
                 self.runSyncIfNeeded()
             } else {
                 self.router.goOffline()
+                self.remoteSSEListener.disconnect()
             }
             self.sseBroadcaster.broadcastConnectionStatus(online: online)
         }
@@ -85,6 +96,7 @@ class EmbeddedServer {
     func stop() {
         server?.stop()
         connectivityMonitor.stop()
+        remoteSSEListener.disconnect()
         print("[EmbeddedServer] Stopped")
     }
 
@@ -104,6 +116,7 @@ class EmbeddedServer {
                 guard let self = self else { return }
                 self.isSyncing = false
                 self.router.goOnline(serverURL: self.settings.remoteServerURL)
+                self.remoteSSEListener.connect(serverURL: self.settings.remoteServerURL)
                 self.sseBroadcaster.broadcastConnectionStatus(online: true)
                 // Trigger data reload
                 self.sseBroadcaster.broadcast(event: [
@@ -162,7 +175,9 @@ class EmbeddedServer {
         // Health check (always local)
         server["/api/health"] = { [weak self] _ in
             let online = self?.router.isOnline ?? false
-            return .ok(.json(["status": "ok", "mode": online ? "online" : "offline"] as [String: Any]))
+            let serverReachable = self?.connectivityMonitor.isOnline ?? false
+            let mode = online ? "online" : (serverReachable ? "syncing" : "offline")
+            return .ok(.json(["status": "ok", "mode": mode] as [String: Any]))
         }
 
         // Characters
@@ -236,28 +251,57 @@ class EmbeddedServer {
                 "Connection": "keep-alive"
             ]) { writer in
                 let clientId = UUID().uuidString
+                print("[SSE] Setting up client \(clientId)")
 
                 // Send connected event
-                let connectedData: [String: Any] = [
-                    "clientId": clientId,
-                    "editingState": self.router.editingState
-                ]
-                if let json = try? JSONSerialization.data(withJSONObject: connectedData),
-                   let str = String(data: json, encoding: .utf8) {
-                    try writer.write("event: connected\ndata: \(str)\n\n".data(using: .utf8)!)
+                do {
+                    let connectedData: [String: Any] = [
+                        "clientId": clientId,
+                        "editingState": self.router.editingState
+                    ]
+                    print("[SSE] editingState: \(self.router.editingState)")
+                    let json = try JSONSerialization.data(withJSONObject: connectedData)
+                    let str = String(data: json, encoding: .utf8) ?? "{}"
+                    print("[SSE] Sending connected event: \(str.prefix(200))")
+                    let sseMessage = "event: connected\ndata: \(str)\n\n"
+                    try writer.write(sseMessage.data(using: .utf8)!)
+                    print("[SSE] Connected event sent successfully")
+                } catch {
+                    print("[SSE] ERROR sending connected event: \(error)")
+                    return
                 }
 
                 // Register this client for future broadcasts
                 self.sseBroadcaster.addClient(id: clientId, writer: writer)
 
+                // Send current connection status immediately
+                do {
+                    let online = self.router.isOnline || self.connectivityMonitor.isOnline
+                    let statusData: [String: Any] = [
+                        "type": "connection-status",
+                        "online": online,
+                        "originClientId": "system"
+                    ]
+                    let statusJson = try JSONSerialization.data(withJSONObject: statusData)
+                    let statusStr = String(data: statusJson, encoding: .utf8) ?? "{}"
+                    print("[SSE] Sending connection-status: \(statusStr)")
+                    let sseMessage = "event: update\ndata: \(statusStr)\n\n"
+                    try writer.write(sseMessage.data(using: .utf8)!)
+                    print("[SSE] Connection-status sent successfully")
+                } catch {
+                    print("[SSE] ERROR sending connection-status: \(error)")
+                    // Don't return — keep the connection alive even if this write failed
+                }
+
                 // Keep connection alive — the broadcaster will push events
                 // This blocks until the client disconnects
+                print("[SSE] Entering keepalive loop for \(clientId)")
                 while true {
                     Thread.sleep(forTimeInterval: 30)
-                    // Send a keepalive comment
                     do {
                         try writer.write(": keepalive\n\n".data(using: .utf8)!)
                     } catch {
+                        print("[SSE] Keepalive failed for \(clientId): \(error)")
                         break
                     }
                 }
