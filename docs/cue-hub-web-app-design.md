@@ -1,4 +1,4 @@
-# Sound Editing Cue Manager - Design Document
+# Cue Hub Web App - Test Design Document
 
 ## Overview
 A web application for managing sound editing cues with dialog and character assignments. Designed for air-gapped LAN deployment with zero administration requirements.
