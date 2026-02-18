@@ -9,8 +9,8 @@ class AppDatabase {
 
     private init() {
         let fileManager = FileManager.default
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dbDir = appSupport.appendingPathComponent("CueHub", isDirectory: true)
+        let documents = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let dbDir = documents.appendingPathComponent("CueHub/desktop", isDirectory: true)
         try! fileManager.createDirectory(at: dbDir, withIntermediateDirectories: true)
         let dbPath = dbDir.appendingPathComponent("local.db").path
 
