@@ -2,6 +2,8 @@ import express, { Request, Response } from 'express';
 import Database from 'better-sqlite3';
 import path from 'path';
 import crypto from 'crypto';
+import os from 'os';
+import fs from 'fs';
 import type { Cue, Character, EditorEntry, SSEEvent } from './src/types';
 
 const app = express();
@@ -11,8 +13,11 @@ const PORT = 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Database setup
-const db = new Database(path.join(__dirname, 'database.db'));
+// Database setup — stored in ~/Documents/CueHub/ as a user document, overridable via DB_PATH
+const defaultDbDir = path.join(os.homedir(), 'Documents', 'CueHub');
+const dbPath = process.env.DB_PATH ?? path.join(defaultDbDir, 'database.db');
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
