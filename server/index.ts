@@ -4,17 +4,17 @@ import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
 import fs from 'fs';
-import type { Cue, Character, EditorEntry, SSEEvent } from './src/types';
+import type { Cue, Character, EditorEntry, SSEEvent } from '../shared/types';
 
 const app = express();
 const PORT = 3000;
 
 // Middleware
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '../web')));
 
-// Database setup — stored in ~/Documents/CueHub/ as a user document, overridable via DB_PATH
-const defaultDbDir = path.join(os.homedir(), 'Documents', 'CueHub');
+// Database setup — stored in ~/Documents/CueHub/server/ as a user document, overridable via DB_PATH
+const defaultDbDir = path.join(os.homedir(), 'Documents', 'CueHub', 'server');
 const dbPath = process.env.DB_PATH ?? path.join(defaultDbDir, 'database.db');
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = new Database(dbPath);

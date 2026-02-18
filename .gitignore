@@ -5,6 +5,8 @@ node_modules/
 dist/
 web/app.js
 desktop/CueHub/Resources/Web/app.js
+desktop/CueHub/Resources/Web/index.html
+desktop/CueHub/Resources/Web/style.css
 
 # Database
 *.db
