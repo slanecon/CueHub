@@ -8,5 +8,5 @@
     "outDir": "dist",
     "esModuleInterop": true
   },
-  "include": ["server.ts", "src/types.ts"]
+  "include": ["server/index.ts", "shared/types.ts"]
 }

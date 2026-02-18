@@ -1,4 +1,4 @@
-import type { Cue, Character, EditorEntry, SSEEvent, CueResponse, HealthResponse } from './types';
+import type { Cue, Character, EditorEntry, SSEEvent, CueResponse, HealthResponse } from '../shared/types';
 
 // === Window extensions ===
 declare global {
