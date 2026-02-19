@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Documentation
+docs/archived/
+
 # Build outputs
 dist/
 web/dist/
