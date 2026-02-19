@@ -2,23 +2,10 @@ export type CueStatus = 'spotted' | 'printed' | 'approved' | 'recorded' | 'trans
 export type CuePriority = 'lowest' | 'low' | 'medium' | 'high' | 'highest';
 export type ConnectionMode = 'online' | 'offline' | 'syncing';
 
-export interface Character {
-  id: string;
-  name: string;
-  created_at: string;
-}
-
 export interface Cue {
   id: string;
-  reel: string;
-  scene: string;
   cue_name: string;
-  start_time: string;
-  end_time: string;
   dialog: string;
-  character_id: string;
-  character_name: string;
-  notes: string;
   status: CueStatus;
   priority: CuePriority;
   created_at: string;
@@ -48,7 +35,7 @@ export type SSEEventType =
 
 export interface SSEEvent {
   type: SSEEventType;
-  entity?: 'character' | 'cue';
+  entity?: 'cue';
   id?: string;
   cueId?: string;
   userName?: string;

@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -16,7 +16,6 @@
 		3E78EB7C80342F9ABCCE0FF1 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = C6F13E90FCE22A07091AE9BD /* GRDB */; };
 		46000FA7E28F07D4C13B5FF0 /* CueHubApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DE37D5A2034E149892406BD /* CueHubApp.swift */; };
 		5723F4DB3CE2A354457B8ACC /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DF953FBC628D9C04890E2BF1 /* WebKit.framework */; };
-		5FD7974E84BE400F752BF956 /* LocalCharacter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CEF1D5108C039D9B05DEF9 /* LocalCharacter.swift */; };
 		6E448F749722A30DAD513FB6 /* SyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DEA2FB4A9160272BEEBFEAA /* SyncEngine.swift */; };
 		71EED4A887A0077B1B2066D4 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8067268E3D6AE92902E3CCCF /* AppSettings.swift */; };
 		819D6C4E7DB2E6CC13A551DF /* ChangeLogEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119C22D2326DEB4160A2455F /* ChangeLogEntry.swift */; };
@@ -51,7 +50,6 @@
 		5CDA58AEA9D60C145004D824 /* WebViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewController.swift; sourceTree = "<group>"; };
 		5DD17CC24E7F45AEB1BFCDA0 /* RemoteSSEListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteSSEListener.swift; sourceTree = "<group>"; };
 		5DE37D5A2034E149892406BD /* CueHubApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CueHubApp.swift; sourceTree = "<group>"; };
-		75CEF1D5108C039D9B05DEF9 /* LocalCharacter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalCharacter.swift; sourceTree = "<group>"; };
 		7DEA2FB4A9160272BEEBFEAA /* SyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngine.swift; sourceTree = "<group>"; };
 		8067268E3D6AE92902E3CCCF /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		8178344CBD6F0BE3B5561161 /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
@@ -145,7 +143,6 @@
 			isa = PBXGroup;
 			children = (
 				119C22D2326DEB4160A2455F /* ChangeLogEntry.swift */,
-				75CEF1D5108C039D9B05DEF9 /* LocalCharacter.swift */,
 				D777B97FF96F9A9F3762C2F8 /* LocalCue.swift */,
 			);
 			path = Models;
@@ -268,10 +265,9 @@
 			mainGroup = 80DF111AC3CD0626DAB46485;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				6F9F6B1953E37C73C5D5C827 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				6F9F6B1953E37C73C5D5C827 /* XCRemoteSwiftPackageReference "GRDB" */,
 				FB50160FCF180797A3D72AEF /* XCRemoteSwiftPackageReference "swifter" */,
 			);
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -306,7 +302,6 @@
 				8F8972BCEB3E0490F469558C /* ConnectivityMonitor.swift in Sources */,
 				46000FA7E28F07D4C13B5FF0 /* CueHubApp.swift in Sources */,
 				150FECF59F52FF0BEBD98403 /* EmbeddedServer.swift in Sources */,
-				5FD7974E84BE400F752BF956 /* LocalCharacter.swift in Sources */,
 				E75FCDEEDBA11C024543910A /* LocalCue.swift in Sources */,
 				AF871B64B7A69DE6F3E643FD /* MainWindowController.swift in Sources */,
 				930585BB49C09E5452F749AE /* PreferencesWindowController.swift in Sources */,
@@ -390,9 +385,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CueHub/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"@executable_path/../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.slanecon.CueHub;
 				PRODUCT_NAME = CueHub;
@@ -413,9 +406,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CueHub/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"@executable_path/../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.slanecon.CueHub;
 				PRODUCT_NAME = CueHub;
@@ -511,7 +502,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		6F9F6B1953E37C73C5D5C827 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+		6F9F6B1953E37C73C5D5C827 /* XCRemoteSwiftPackageReference "GRDB" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/groue/GRDB.swift";
 			requirement = {
@@ -537,7 +528,7 @@
 		};
 		C6F13E90FCE22A07091AE9BD /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 6F9F6B1953E37C73C5D5C827 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			package = 6F9F6B1953E37C73C5D5C827 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
 		};
 /* End XCSwiftPackageProductDependency section */

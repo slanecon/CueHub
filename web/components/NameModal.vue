@@ -28,13 +28,13 @@ const name = ref('')
 async function submit() {
   if (!name.value.trim()) return
   uiStore.setUserName(name.value.trim())
-  await Promise.all([cuesStore.fetchCues(), cuesStore.fetchCharacters()])
+  await cuesStore.fetchCues()
 }
 
 // If name already set on mount, fetch data immediately
 watch(() => uiStore.showName, (show) => {
   if (!show && uiStore.userName) {
-    Promise.all([cuesStore.fetchCues(), cuesStore.fetchCharacters()])
+    cuesStore.fetchCues()
   }
 }, { immediate: true })
 </script>

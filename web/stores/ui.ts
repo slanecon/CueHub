@@ -14,7 +14,6 @@ export const useUiStore = defineStore('ui', () => {
 
   // Modal visibility flags
   const showCueForm = ref(false)
-  const showCharacter = ref(false)
   const showConfirm = ref(false)
   const showName = ref(false)
   const showConflict = ref(false)
@@ -35,7 +34,7 @@ export const useUiStore = defineStore('ui', () => {
   return {
     userName, clientId, connectionMode,
     selectedIds, editingCueId, editingBaseCue, editorsMap,
-    showCueForm, showCharacter, showConfirm, showName, showConflict,
+    showCueForm, showConfirm, showName, showConflict,
     toastMessage,
     showNameModal, setUserName,
   }

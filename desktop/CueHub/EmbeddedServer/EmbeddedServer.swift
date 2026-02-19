@@ -180,26 +180,6 @@ class EmbeddedServer {
             return .ok(.json(["status": "ok", "mode": mode] as [String: Any]))
         }
 
-        // Characters
-        server["/api/characters"] = { [weak self] request in
-            guard let self = self else { return .internalServerError }
-            if request.method == "GET" {
-                return self.router.handleGetCharacters()
-            } else if request.method == "POST" {
-                return self.router.handlePostCharacter(body: request.bodyDict, broadcaster: self.sseBroadcaster)
-            }
-            return .badRequest(nil)
-        }
-
-        server["/api/characters/:id"] = { [weak self] request in
-            guard let self = self else { return .internalServerError }
-            let id = request.params[":id"] ?? ""
-            if request.method == "DELETE" {
-                return self.router.handleDeleteCharacter(id: id, body: request.bodyDict, broadcaster: self.sseBroadcaster)
-            }
-            return .badRequest(nil)
-        }
-
         // Cues
         server["/api/cues"] = { [weak self] request in
             guard let self = self else { return .internalServerError }
