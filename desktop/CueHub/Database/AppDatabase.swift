@@ -44,14 +44,11 @@ class AppDatabase {
                 t.column("character_id", .text).notNull()
                     .references("characters", onDelete: .cascade)
                 t.column("notes", .text).defaults(to: "")
-                t.column("status", .text).defaults(to: "Spotted")
-                t.column("priority", .text).defaults(to: "Medium")
+                t.column("status", .text).defaults(to: "spotted")
+                t.column("priority", .text).defaults(to: "medium")
                 t.column("created_at", .datetime).defaults(sql: "CURRENT_TIMESTAMP")
                 t.column("updated_at", .datetime).defaults(sql: "CURRENT_TIMESTAMP")
             }
-
-            try db.create(index: "idx_cues_character", on: "cues", columns: ["character_id"], ifNotExists: true)
-            try db.create(index: "idx_cues_start_time", on: "cues", columns: ["start_time"], ifNotExists: true)
 
             try db.create(table: "change_log", ifNotExists: true) { t in
                 t.autoIncrementedPrimaryKey("id")
@@ -67,64 +64,46 @@ class AppDatabase {
             try db.create(index: "idx_change_log_synced", on: "change_log", columns: ["synced"], ifNotExists: true)
         }
 
+        migrator.registerMigration("v2_remove_characters") { db in
+            // Drop old tables and recreate cues without character/timecode fields
+            try db.drop(table: "cues")
+            try db.drop(table: "characters")
+
+            try db.create(table: "cues") { t in
+                t.column("id", .text).primaryKey()
+                t.column("cue_name", .text).defaults(to: "")
+                t.column("dialog", .text).defaults(to: "")
+                t.column("status", .text).defaults(to: "spotted")
+                t.column("priority", .text).defaults(to: "medium")
+                t.column("created_at", .datetime).defaults(sql: "CURRENT_TIMESTAMP")
+                t.column("updated_at", .datetime).defaults(sql: "CURRENT_TIMESTAMP")
+            }
+
+            // Clear any stale change log entries from the old schema
+            try db.execute(sql: "DELETE FROM change_log")
+        }
+
         return migrator
-    }
-
-    // MARK: - Character Operations
-
-    func allCharacters() throws -> [LocalCharacter] {
-        try dbQueue.read { db in
-            try LocalCharacter.order(Column("name")).fetchAll(db)
-        }
-    }
-
-    func insertCharacter(_ character: LocalCharacter, logChange: Bool = true) throws {
-        try dbQueue.write { db in
-            var char = character; try char.insert(db)
-            if logChange {
-                try ChangeLogEntry.log(db, entity: "character", entityId: character.id, operation: "insert", record: character)
-            }
-        }
-    }
-
-    func deleteCharacter(id: String, logChange: Bool = true) throws {
-        try dbQueue.write { db in
-            // Cascade: delete cues for this character
-            try db.execute(sql: "DELETE FROM cues WHERE character_id = ?", arguments: [id])
-            try db.execute(sql: "DELETE FROM characters WHERE id = ?", arguments: [id])
-            if logChange {
-                try ChangeLogEntry.logDelete(db, entity: "character", entityId: id)
-            }
-        }
     }
 
     // MARK: - Cue Operations
 
-    func allCues(since: String? = nil) throws -> [CueWithCharacter] {
+    func allCues(since: String? = nil) throws -> [LocalCue] {
         try dbQueue.read { db in
-            var sql = """
-                SELECT cues.*, characters.name AS character_name
-                FROM cues
-                JOIN characters ON cues.character_id = characters.id
-            """
+            var sql = "SELECT * FROM cues"
             var arguments: [any DatabaseValueConvertible] = []
             if let since = since {
-                sql += " WHERE cues.updated_at > ?"
+                sql += " WHERE updated_at > ?"
                 arguments.append(since)
             }
-            sql += " ORDER BY cues.start_time"
-            return try CueWithCharacter.fetchAll(db, sql: sql, arguments: StatementArguments(arguments))
+            sql += " ORDER BY cue_name"
+            return try LocalCue.fetchAll(db, sql: sql, arguments: StatementArguments(arguments))
         }
     }
 
-    func getCue(id: String) throws -> CueWithCharacter? {
+    func getCue(id: String) throws -> LocalCue? {
         try dbQueue.read { db in
-            try CueWithCharacter.fetchOne(db, sql: """
-                SELECT cues.*, characters.name AS character_name
-                FROM cues
-                JOIN characters ON cues.character_id = characters.id
-                WHERE cues.id = ?
-            """, arguments: [id])
+            try LocalCue.fetchOne(db, sql: "SELECT * FROM cues WHERE id = ?", arguments: [id])
         }
     }
 
@@ -179,12 +158,6 @@ class AppDatabase {
     }
 
     // MARK: - Bulk Operations (for sync pull)
-
-    func upsertCharacter(_ character: LocalCharacter) throws {
-        try dbQueue.write { db in
-            var char = character; try char.save(db)
-        }
-    }
 
     func upsertCue(_ cue: LocalCue) throws {
         try dbQueue.write { db in

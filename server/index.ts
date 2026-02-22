@@ -4,7 +4,7 @@ import path from 'path';
 import crypto from 'crypto';
 import os from 'os';
 import fs from 'fs';
-import type { Cue, Character, EditorEntry, SSEEvent } from '../shared/types';
+import type { Cue, EditorEntry, SSEEvent } from '../shared/types';
 
 const app = express();
 const PORT = 3000;
@@ -23,31 +23,15 @@ db.pragma('foreign_keys = ON');
 
 function createTables(): void {
   db.exec(`
-    CREATE TABLE IF NOT EXISTS characters (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL UNIQUE,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
     CREATE TABLE IF NOT EXISTS cues (
       id TEXT PRIMARY KEY,
-      reel TEXT DEFAULT '',
-      scene TEXT DEFAULT '',
       cue_name TEXT DEFAULT '',
-      start_time TEXT NOT NULL,
-      end_time TEXT NOT NULL,
-      dialog TEXT NOT NULL,
-      character_id TEXT NOT NULL,
-      notes TEXT DEFAULT '',
-      status TEXT DEFAULT 'Spotted',
-      priority TEXT DEFAULT 'Medium',
+      dialog TEXT DEFAULT '',
+      status TEXT DEFAULT 'spotted',
+      priority TEXT DEFAULT 'medium',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (character_id) REFERENCES characters(id)
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-
-    CREATE INDEX IF NOT EXISTS idx_cues_character ON cues(character_id);
-    CREATE INDEX IF NOT EXISTS idx_cues_start_time ON cues(start_time);
   `);
 }
 
@@ -133,68 +117,26 @@ app.delete('/api/cues/:id/editing', (req: Request, res: Response) => {
   res.json({ success: true });
 });
 
-// --- Characters API ---
-
-app.get('/api/characters', (_req: Request, res: Response) => {
-  const characters = db.prepare('SELECT * FROM characters ORDER BY name').all() as Character[];
-  res.json(characters);
-});
-
-app.post('/api/characters', (req: Request, res: Response) => {
-  const { name, clientId, id: providedId } = req.body as { name: string; clientId?: string; id?: string };
-  if (!name || !name.trim()) {
-    return res.status(400).json({ error: 'Name is required' });
-  }
-  const id = providedId ?? crypto.randomUUID();
-  try {
-    db.prepare('INSERT INTO characters (id, name) VALUES (?, ?)').run(id, name.trim());
-    const character = db.prepare('SELECT * FROM characters WHERE id = ?').get(id) as Character;
-    broadcast({ type: 'created', entity: 'character', id: character.id }, clientId);
-    res.status(201).json(character);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException & { code?: string }).code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      return res.status(409).json({ error: 'Character name already exists' });
-    }
-    throw err;
-  }
-});
-
-app.delete('/api/characters/:id', (req: Request, res: Response) => {
-  const { clientId } = (req.body ?? {}) as { clientId?: string };
-  const id = req.params.id;
-  db.prepare('DELETE FROM cues WHERE character_id = ?').run(id);
-  const result = db.prepare('DELETE FROM characters WHERE id = ?').run(id);
-  if (result.changes === 0) {
-    return res.status(404).json({ error: 'Character not found' });
-  }
-  broadcast({ type: 'deleted', entity: 'character', id }, clientId);
-  res.json({ success: true });
-});
-
 // --- Cues API ---
 
-const CUE_SELECT = `
-  SELECT cues.*, characters.name AS character_name
-  FROM cues
-  JOIN characters ON cues.character_id = characters.id
-`;
+const CUE_SELECT = `SELECT * FROM cues`;
 
 app.get('/api/cues', (req: Request, res: Response) => {
   let query = CUE_SELECT;
   const params: string[] = [];
 
   if (req.query.since) {
-    query += ' WHERE cues.updated_at > ?';
+    query += ' WHERE updated_at > ?';
     params.push(req.query.since as string);
   }
 
-  query += ' ORDER BY cues.start_time';
+  query += ' ORDER BY cue_name';
   const cues = db.prepare(query).all(...params) as Cue[];
   res.json(cues);
 });
 
 app.get('/api/cues/:id', (req: Request, res: Response) => {
-  const cue = db.prepare(`${CUE_SELECT} WHERE cues.id = ?`).get(req.params.id) as Cue | undefined;
+  const cue = db.prepare(`${CUE_SELECT} WHERE id = ?`).get(req.params.id) as Cue | undefined;
   if (!cue) {
     return res.status(404).json({ error: 'Cue not found' });
   }
@@ -202,35 +144,28 @@ app.get('/api/cues/:id', (req: Request, res: Response) => {
 });
 
 app.post('/api/cues', (req: Request, res: Response) => {
-  const { start_time, end_time, dialog, character_id, clientId, id: providedId,
-          reel, scene, cue_name, notes, status, priority } =
+  const { cue_name, dialog, status, priority, clientId, id: providedId } =
     req.body as Partial<Cue> & { clientId?: string; id?: string };
 
-  if (!start_time || !end_time || !dialog || !character_id) {
-    return res.status(400).json({ error: 'start_time, end_time, dialog, and character_id are required' });
-  }
   const id = providedId ?? crypto.randomUUID();
   db.prepare(`
-    INSERT INTO cues (id, reel, scene, cue_name, start_time, end_time, dialog, character_id, notes, status, priority)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, reel ?? '', scene ?? '', cue_name ?? '', start_time, end_time, dialog, character_id,
-         notes ?? '', status ?? 'Spotted', priority ?? 'Medium');
-  const cue = db.prepare(`${CUE_SELECT} WHERE cues.id = ?`).get(id) as Cue;
+    INSERT INTO cues (id, cue_name, dialog, status, priority)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(id, cue_name ?? '', dialog ?? '', status ?? 'spotted', priority ?? 'medium');
+  const cue = db.prepare(`${CUE_SELECT} WHERE id = ?`).get(id) as Cue;
   broadcast({ type: 'created', entity: 'cue', id: cue.id }, clientId);
   res.status(201).json(cue);
 });
 
 app.put('/api/cues/:id', (req: Request, res: Response) => {
-  const { start_time, end_time, dialog, character_id, updated_at, baseCue, clientId,
-          reel, scene, cue_name, notes, status, priority } =
+  const { cue_name, dialog, status, priority, updated_at, baseCue, clientId } =
     req.body as Partial<Cue> & { updated_at?: string; baseCue?: Cue; clientId?: string };
 
   const id = req.params.id;
-  const mergeFields: (keyof Cue)[] = ['start_time', 'end_time', 'dialog', 'character_id',
-                                       'reel', 'scene', 'cue_name', 'notes', 'status', 'priority'];
+  const mergeFields: (keyof Cue)[] = ['cue_name', 'dialog', 'status', 'priority'];
 
-  const getCueWithName = (cueId: string): Cue =>
-    db.prepare(`${CUE_SELECT} WHERE cues.id = ?`).get(cueId) as Cue;
+  const getCue = (cueId: string): Cue =>
+    db.prepare(`${CUE_SELECT} WHERE id = ?`).get(cueId) as Cue;
 
   const existing = db.prepare('SELECT * FROM cues WHERE id = ?').get(id) as Cue | undefined;
   if (!existing) {
@@ -238,11 +173,8 @@ app.put('/api/cues/:id', (req: Request, res: Response) => {
   }
 
   const mine: Partial<Cue> = {
-    start_time, end_time, dialog, character_id,
-    reel: reel ?? existing.reel,
-    scene: scene ?? existing.scene,
     cue_name: cue_name ?? existing.cue_name,
-    notes: notes ?? existing.notes,
+    dialog: dialog ?? existing.dialog,
     status: status ?? existing.status,
     priority: priority ?? existing.priority,
   };
@@ -250,17 +182,15 @@ app.put('/api/cues/:id', (req: Request, res: Response) => {
   const saveCue = (values: Partial<Cue>): void => {
     const now = new Date().toISOString();
     db.prepare(`
-      UPDATE cues SET reel = ?, scene = ?, cue_name = ?, start_time = ?, end_time = ?,
-        dialog = ?, character_id = ?, notes = ?, status = ?, priority = ?, updated_at = ?
+      UPDATE cues SET cue_name = ?, dialog = ?, status = ?, priority = ?, updated_at = ?
       WHERE id = ?
-    `).run(values.reel, values.scene, values.cue_name, values.start_time, values.end_time,
-           values.dialog, values.character_id, values.notes, values.status, values.priority, now, id);
+    `).run(values.cue_name, values.dialog, values.status, values.priority, now, id);
   };
 
   // No conflict — timestamps match, just save
   if (!updated_at || existing.updated_at === updated_at) {
     saveCue(mine);
-    const cue = getCueWithName(id);
+    const cue = getCue(id);
     broadcast({ type: 'updated', entity: 'cue', id }, clientId);
     return res.json(cue);
   }
@@ -291,17 +221,17 @@ app.put('/api/cues/:id', (req: Request, res: Response) => {
 
     if (conflictingFields.length === 0) {
       saveCue(merged);
-      const cue = getCueWithName(id);
+      const cue = getCue(id);
       broadcast({ type: 'updated', entity: 'cue', id }, clientId);
       return res.json({ ...cue, merged: true, mergedFields });
     }
 
-    const serverCue = getCueWithName(id);
+    const serverCue = getCue(id);
     return res.status(409).json({ error: 'conflict', serverCue, conflictingFields });
   }
 
   // No baseCue provided — fall back to full conflict
-  const serverCue = getCueWithName(id);
+  const serverCue = getCue(id);
   return res.status(409).json({ error: 'conflict', serverCue });
 });
 

@@ -99,65 +99,6 @@ class RequestRouter {
         return result
     }
 
-    // MARK: - Characters
-
-    func handleGetCharacters() -> HttpResponse {
-        if case .online = mode {
-            return proxyGET(path: "/api/characters")
-        }
-        // Offline: serve from local DB
-        do {
-            let chars = try db.allCharacters()
-            let dicts = chars.map { $0.toDict() }
-            return .ok(.json(dicts as Any))
-        } catch {
-            return .internalServerError
-        }
-    }
-
-    func handlePostCharacter(body: [String: Any], broadcaster: SSEBroadcaster) -> HttpResponse {
-        if case .online = mode {
-            return proxyRequest(method: "POST", path: "/api/characters", body: body)
-        }
-        // Offline: insert locally
-        let name = body["name"] as? String ?? ""
-        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else {
-            return jsonError(400, "Name is required")
-        }
-        let id = body["id"] as? String ?? UUID().uuidString
-        let char = LocalCharacter(id: id, name: name.trimmingCharacters(in: .whitespaces))
-        do {
-            try db.insertCharacter(char)
-            let result = char.toDict()
-            broadcaster.broadcast(event: [
-                "type": "created", "entity": "character", "id": id,
-                "originClientId": body["clientId"] as? String ?? ""
-            ])
-            return jsonResponse(201, result)
-        } catch {
-            if "\(error)".contains("UNIQUE") {
-                return jsonError(409, "Character name already exists")
-            }
-            return .internalServerError
-        }
-    }
-
-    func handleDeleteCharacter(id: String, body: [String: Any], broadcaster: SSEBroadcaster) -> HttpResponse {
-        if case .online = mode {
-            return proxyRequest(method: "DELETE", path: "/api/characters/\(id)", body: body)
-        }
-        do {
-            try db.deleteCharacter(id: id)
-            broadcaster.broadcast(event: [
-                "type": "deleted", "entity": "character", "id": id,
-                "originClientId": body["clientId"] as? String ?? ""
-            ])
-            return .ok(.json(["success": true] as [String: Any]))
-        } catch {
-            return .internalServerError
-        }
-    }
-
     // MARK: - Cues
 
     func handleGetCues(since: String?) -> HttpResponse {
@@ -192,25 +133,14 @@ class RequestRouter {
         if case .online = mode {
             return proxyRequest(method: "POST", path: "/api/cues", body: body)
         }
-        // Offline: insert locally
-        guard let start = body["start_time"] as? String, !start.isEmpty,
-              let end = body["end_time"] as? String, !end.isEmpty,
-              let dialog = body["dialog"] as? String, !dialog.isEmpty,
-              let charId = body["character_id"] as? String, !charId.isEmpty else {
-            return jsonError(400, "start_time, end_time, dialog, and character_id are required")
-        }
-
         let id = body["id"] as? String ?? UUID().uuidString
         let now = ISO8601DateFormatter().string(from: Date())
         let cue = LocalCue(
             id: id,
-            reel: body["reel"] as? String ?? "",
-            scene: body["scene"] as? String ?? "",
             cue_name: body["cue_name"] as? String ?? "",
-            start_time: start, end_time: end, dialog: dialog, character_id: charId,
-            notes: body["notes"] as? String ?? "",
-            status: body["status"] as? String ?? "Spotted",
-            priority: body["priority"] as? String ?? "Medium",
+            dialog: body["dialog"] as? String ?? "",
+            status: body["status"] as? String ?? "spotted",
+            priority: body["priority"] as? String ?? "medium",
             created_at: now, updated_at: now
         )
         do {
@@ -230,21 +160,14 @@ class RequestRouter {
         if case .online = mode {
             return proxyRequest(method: "PUT", path: "/api/cues/\(id)", body: body)
         }
-        // Offline: update locally (simplified — no 3-way merge needed in single-user offline mode)
         do {
             let now = ISO8601DateFormatter().string(from: Date())
             let cue = LocalCue(
                 id: id,
-                reel: body["reel"] as? String ?? "",
-                scene: body["scene"] as? String ?? "",
                 cue_name: body["cue_name"] as? String ?? "",
-                start_time: body["start_time"] as? String ?? "",
-                end_time: body["end_time"] as? String ?? "",
                 dialog: body["dialog"] as? String ?? "",
-                character_id: body["character_id"] as? String ?? "",
-                notes: body["notes"] as? String ?? "",
-                status: body["status"] as? String ?? "Spotted",
-                priority: body["priority"] as? String ?? "Medium",
+                status: body["status"] as? String ?? "spotted",
+                priority: body["priority"] as? String ?? "medium",
                 updated_at: now
             )
             try db.updateCue(cue)

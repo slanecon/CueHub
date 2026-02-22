@@ -7,7 +7,6 @@
     <span id="status-text">{{ statusText }}</span>
   </div>
   <CueFormModal />
-  <CharacterModal />
   <ConfirmModal />
   <NameModal />
   <ConflictModal />
@@ -23,7 +22,6 @@ import { useSSE } from './composables/useSSE'
 import AppToolbar from './components/AppToolbar.vue'
 import CueTable from './components/CueTable.vue'
 import CueFormModal from './components/CueFormModal.vue'
-import CharacterModal from './components/CharacterModal.vue'
 import ConfirmModal from './components/ConfirmModal.vue'
 import NameModal from './components/NameModal.vue'
 import ConflictModal from './components/ConflictModal.vue'

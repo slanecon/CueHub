@@ -53,16 +53,13 @@ class SyncEngine {
         }
 
         let deduplicated = deduplicateChanges(changes)
-        let totalSteps = deduplicated.count + 2 // +2 for pull characters and pull cues
+        let totalSteps = deduplicated.count + 1 // +1 for pull cues
         var currentStep = 0
 
-        // Step 2: Replay characters first (FK integrity)
-        let charChanges = deduplicated.filter { $0.entity == "character" }
-        let cueChanges = deduplicated.filter { $0.entity == "cue" }
-
-        for entry in charChanges {
+        // Step 2: Replay cues
+        for entry in deduplicated {
             currentStep += 1
-            reportProgress(currentStep, totalSteps, "Syncing character \(currentStep)/\(charChanges.count + cueChanges.count)")
+            reportProgress(currentStep, totalSteps, "Syncing cue \(currentStep)/\(deduplicated.count)")
             let syncResult = replayEntry(entry, serverURL: serverURL)
             switch syncResult {
             case .success:
@@ -76,29 +73,7 @@ class SyncEngine {
             }
         }
 
-        // Step 3: Replay cues
-        for entry in cueChanges {
-            currentStep += 1
-            reportProgress(currentStep, totalSteps, "Syncing cue \(currentStep)/\(charChanges.count + cueChanges.count)")
-            let syncResult = replayEntry(entry, serverURL: serverURL)
-            switch syncResult {
-            case .success:
-                result.pushed += 1
-                markEntrySynced(entry)
-            case .conflict:
-                result.conflicts += 1
-                markEntrySynced(entry)
-            case .error(let msg):
-                result.errors.append(msg)
-            }
-        }
-
-        // Step 4: Pull server changes since last sync
-        currentStep += 1
-        reportProgress(currentStep, totalSteps, "Pulling server characters...")
-        let pulledChars = pullCharacters(serverURL: serverURL)
-        result.pulled += pulledChars
-
+        // Step 3: Pull server cues
         currentStep += 1
         reportProgress(currentStep, totalSteps, "Pulling server cues...")
         let pulledCues = pullCues(serverURL: serverURL)
@@ -197,7 +172,7 @@ class SyncEngine {
         // Ensure the UUID is included so the server uses it
         body["id"] = entry.entity_id
 
-        let path = entry.entity == "character" ? "/api/characters" : "/api/cues"
+        let path = "/api/cues"
         let (statusCode, _) = httpRequest(method: "POST", url: serverURL + path, body: body)
 
         switch statusCode {
@@ -218,7 +193,7 @@ class SyncEngine {
             return .error("Invalid payload for update \(entry.entity):\(entry.entity_id)")
         }
 
-        let path = "/api/\(entry.entity == "character" ? "characters" : "cues")/\(entry.entity_id)"
+        let path = "/api/cues/\(entry.entity_id)"
 
         // Include baseCue for 3-way merge (the payload IS the base since it's the state we started from)
         // The updated_at in the payload is the base timestamp
@@ -269,7 +244,7 @@ class SyncEngine {
     }
 
     private func replayDelete(_ entry: ChangeLogEntry, serverURL: String) -> ReplayResult {
-        let path = "/api/\(entry.entity == "character" ? "characters" : "cues")/\(entry.entity_id)"
+        let path = "/api/cues/\(entry.entity_id)"
         let (statusCode, _) = httpRequest(method: "DELETE", url: serverURL + path, body: [:])
 
         switch statusCode {
@@ -284,18 +259,6 @@ class SyncEngine {
     }
 
     // MARK: - Pull
-
-    private func pullCharacters(serverURL: String) -> Int {
-        let (statusCode, data) = httpRequestArray(method: "GET", url: serverURL + "/api/characters")
-        guard statusCode == 200, let chars = data else { return 0 }
-        var count = 0
-        for dict in chars {
-            let char = LocalCharacter(from: dict)
-            try? db.upsertCharacter(char)
-            count += 1
-        }
-        return count
-    }
 
     private func pullCues(serverURL: String) -> Int {
         var path = "/api/cues"
@@ -317,13 +280,8 @@ class SyncEngine {
     // MARK: - Helpers
 
     private func applyServerResponse(entity: String, dict: [String: Any]) {
-        if entity == "character" {
-            let char = LocalCharacter(from: dict)
-            try? db.upsertCharacter(char)
-        } else {
-            let cue = LocalCue(from: dict)
-            try? db.upsertCue(cue)
-        }
+        let cue = LocalCue(from: dict)
+        try? db.upsertCue(cue)
     }
 
     private func markEntrySynced(_ entry: ChangeLogEntry) {
